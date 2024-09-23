@@ -1,4 +1,11 @@
-# ReBuzz
+# ReBuzz - Complete Build fork
+Hello, this is my Complete ReBuzz fork.  This fork allows for a complete build of ReBuzz, including dependencies, 3rd party stuff, and runtime files.
+
+You do not (should not - I have not tested assertion) need to install ReBuzz to build this fork of Rebuzz.
+
+This fork will build / copy everything required into the output 'bin' folder, which is located at the root of your local git repository.  ReBuzz can then be run from that location.
+
+# What is ReBuzz ?
 ReBuzz is a modular digital audio workstation (DAW) built upon the foundation of [Jeskola Buzz](https://jeskola.net/buzz/) software. Written in C#, ReBuzz combines modern features with the beloved workflow of its predecessor. While it’s still in development, users should exercise some caution regarding stability and other potential uncertainties. The primary focus is on providing a stable experience and robust VST support.
 
 ## Features
@@ -19,15 +26,17 @@ Requires:
 2. [Latest Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)
 
 ## How to build?
-1. Install [ReBuzz](https://buzz.robotplanet.dk/files/ReBuzzSetup_2024_Preview.exe)
-2. Clone/download this repo
-3. Open the solution in Visual Studio
-4. Update solution dependencies (Dependencies-->Assemblies) to reference assemblies included in the ReBuzz app folder.
-5. Build ReBuzz and copy ReBuzz.exe, dll and pdb files to ReBuzz install folder
-6. Open project preferences and in the Debug section click 'Open debug launch profiles UI'
-   * Click 'Create a new profile'
-   * Choose 'Executable' and select ReBuzz.exe in the ReBuzz install directory
-7. Choose the new debug profile and run the app
+1. You need Visual Studio 2022.  Community Edition will do.
+
+2. Clone this ReBuzz Fork.  Make sure you also get all the submodules (using -recurse-submodules)
+
+3. Load the ReBuzz.sln into VS 2022
+
+4. Select Debug Config.  (Release might work, but I've not tested that yet)
+
+5. Build all.
+
+6. You can now run ReBuzz directly from within Visual Studio.  (it does not need to run from c:\Program Files)
 
 
 ## How can I help?
