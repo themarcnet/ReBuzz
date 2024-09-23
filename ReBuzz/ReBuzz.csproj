@@ -186,6 +186,6 @@
     <PreBuildEvent>powershell -Command "((Get-Date).ToUniversalTime()).ToString('s') | Out-File '$(MSBuildProjectDirectory)\BuildDate.txt'"</PreBuildEvent>
     <ProduceReferenceAssembly>True</ProduceReferenceAssembly>
     <Title>ReBuzz</Title>
-    <BaseOutputPath>$(SolutionDir)\bin</BaseOutputPath>
+    <BaseOutputPath>$(SolutionDir)..\bin</BaseOutputPath>
   </PropertyGroup>
 </Project>
