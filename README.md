@@ -19,7 +19,7 @@ ReBuzz is a modular digital audio workstation (DAW) built upon the foundation of
 * ...
 
 ## Download
-[ReBuzz Installer](https://buzz.robotplanet.dk/files/ReBuzzSetup_2024_Preview.exe)
+[ReBuzz Installer](https://github.com/wasteddesign/ReBuzz/releases/latest)
 
 Requires:
 1. [.NET 8.0 Desktop Runtime - Windows x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-8.0.3-windows-x64-installer?cid=getdotnetcore)
