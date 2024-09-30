@@ -13,3 +13,6 @@
 [submodule "ReBuzzRunTime"]
 	path = ReBuzzRunTime
 	url = https://github.com/themarcnet/ReBuzzRunTime
+[submodule "ReBuzzPatternXP/PatternXPRE"]
+	path = ReBuzzPatternXP/PatternXPRE
+	url = https://github.com/wasteddesign/PatternXPRE
