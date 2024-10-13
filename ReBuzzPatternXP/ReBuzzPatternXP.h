@@ -4,13 +4,27 @@ using Buzz::MachineInterface::MachineDecl;
 using Buzz::MachineInterface::IBuzzMachine;
 using Buzz::MachineInterface::IBuzzMachineHost;
 using Buzz::MachineInterface::ParameterDecl;
+
+
+using BuzzGUI::Interfaces::IParameter;
+using BuzzGUI::Interfaces::IPattern;
+using BuzzGUI::Interfaces::IMachineDLL;
+using BuzzGUI::Interfaces::BuzzCommand;
+using BuzzGUI::Interfaces::IPatternEditorColumn;
+
 using System::ComponentModel::INotifyPropertyChanged;
-using  System::ComponentModel::PropertyChangedEventHandler;
+using System::ComponentModel::PropertyChangedEventHandler;
 using System::String;
 using System::Collections::Generic::IDictionary;
+using System::Windows::Forms::UserControl;
+using System::Collections::Generic::IEnumerable;
+
+using ReBuzz::NativeMachineFramework::MachineWrapper;
+
 
 #include "..\..\Buzz\MachineInterface.h"
-#include "MachineCallbackWrapper.h"
+#include <MachineCallbackWrapper.h>
+
 
 [MachineDecl(Name = "Pattern XP Editor", ShortName = "PXP", Author = "WDE/MarCNeT", MaxTracks = 8, InputCount = 0, OutputCount = 0)]
 public ref class ReBuzzPatternXpMachine : IBuzzMachine, INotifyPropertyChanged
@@ -26,6 +40,62 @@ public:
     void Work();
 
     void ImportFinished(IDictionary<String^, String^>^ machineNameMap);
+
+    UserControl^ PatternEditorControl();
+
+    void SetEditorPattern(IPattern^ pattern);
+
+    void RecordControlChange(IParameter^ parameter, int track, int value);
+
+    void SetTargetMachine(IMachine^ machine);
+
+    String^ GetEditorMachine();
+
+    void SetPatternEditorMachine(IMachineDLL^ editorMachine);
+
+    void SetPatternName(String^ machine, String^ oldName, String^ newName);
+
+    int GetTicksPerBeatDelegate(IPattern^ pattern, int playPosition);
+    
+    void ControlChange(IMachine^ machine, int group, int track, int param, int value);
+
+    void SetModifiedFlag();
+
+    property Object^ MachineState
+    {
+        Object^ get()
+        {
+            return nullptr;
+        }
+
+        void set(Object^ val)
+        {}
+    }
+
+    bool CanExecuteCommand(BuzzCommand cmd);
+
+    void ExecuteCommand(BuzzCommand cmd);
+
+    void MidiNote(int channel, int value, int velocity);
+
+    void MidiControlChange(int ctrl, int channel, int value);
+
+    cli::array<byte>^ GetPatternEditorData();
+
+    void SetPatternEditorData(cli::array<byte>^ data);
+
+    cli::array<int>^ GetPatternEditorMachineMIDIEvents(IPattern^ pattern);
+
+    void SetPatternEditorMachineMIDIEvents(IPattern^ pattern, cli::array<int>^ data);
+
+    //NOT SUPPORTED
+    //IEnumerable<IPatternEditorColumn^>^ GetPatternEditorEvents(IPattern^ pattern, int tbegin, int tend);
+
+    void Activate();
+
+    void Release();
+
+    void CreatePatternCopy(IPattern^ pnew, IPattern^ p);
 
     //======================= Property Changed Events ======================
     event PropertyChangedEventHandler^ PropertyChanged
@@ -62,6 +132,7 @@ private:
     IBuzzMachineHost^ m_host;
     CMachineInterface* m_interface;
     bool m_dummyParam;
-    MachineCallbackWrapper* m_callbackWrapper;
-    CMachineData * m_thisMachine;
+    MachineWrapper^ m_machineWrapper;
+    bool m_initialised;
+    void* m_callbackdata;
 };

@@ -42,9 +42,6 @@
     <ClCompile Include="PatternXPRE\Buzz\XMemDC.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PatternXPRE\patternxp\PatternXP.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PatternXPRE\patternxp\tree\XHtmlTree.cpp">
       <Filter>Source Files\Tree</Filter>
     </ClCompile>
@@ -71,9 +68,6 @@
     </ClCompile>
     <ClCompile Include="PatternXPRE\patternxp\tree\VisualStylesXP.cpp">
       <Filter>Source Files\Tree</Filter>
-    </ClCompile>
-    <ClCompile Include="MachineCallbackWrapper.cpp">
-      <Filter>Source Files\ReBuzz</Filter>
     </ClCompile>
     <ClCompile Include="ReBuzzPatternXP.cpp">
       <Filter>Source Files\ReBuzz</Filter>
@@ -131,14 +125,13 @@
     <ClInclude Include="PatternXPRE\patternxp\TopWnd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MachineCallbackWrapper.h">
-      <Filter>Header Files\ReBuzz</Filter>
-    </ClInclude>
     <ClInclude Include="ReBuzzPatternXP.h">
       <Filter>Header Files\ReBuzz</Filter>
     </ClInclude>
-    <ClInclude Include="MachineEventWrapper.h">
-      <Filter>Header Files\ReBuzz</Filter>
-    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="PatternXPRE\patternxp\PatternXP.rc">
+      <Filter>Source Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

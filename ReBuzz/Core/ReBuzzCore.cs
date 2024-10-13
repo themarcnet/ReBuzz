@@ -86,6 +86,14 @@ namespace ReBuzz.Core
         BuzzView activeView = BuzzView.MachineView;
         public ReBuzzTheme Theme { get; set; }
 
+        public System.Drawing.Color GetThemeColour(string name)
+        {
+            var wpfColour = ThemeColors[name];
+
+            //Convert to System.Drawing.Color
+            return System.Drawing.Color.FromArgb(wpfColour.A, wpfColour.R, wpfColour.G, wpfColour.B);
+        }
+
         public BuzzView ActiveView { get { return activeView; } set { activeView = value; PropertyChanged.Raise(this, "ActiveView"); } }
         double masterVolume = 1;
         public double MasterVolume { get => masterVolume; set { masterVolume = value; PropertyChanged.Raise(this, "MasterVolume"); SetModifiedFlag(); } }
@@ -611,7 +619,8 @@ namespace ReBuzz.Core
             // Init process and thread priorities
             ProcessAndThreadProfile.Profile2();
 
-            DefaultPatternEditor = "Modern Pattern Editor";
+            //DefaultPatternEditor = "Modern Pattern Editor";
+            DefaultPatternEditor = "ReBuzzPatternXP";
 
             Global.GeneralSettings.PropertyChanged += GeneralSettings_PropertyChanged;
             Global.EngineSettings.PropertyChanged += EngineSettings_PropertyChanged;

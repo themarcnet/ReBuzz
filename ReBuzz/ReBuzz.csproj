@@ -129,6 +129,7 @@
     <None Remove="Common\gfx\squirrel.jpeg" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\NativeMachineFrameworkUI\NativeMachineFrameworkUI.csproj" />
     <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.BuzzUpdate\BuzzGUI.BuzzUpdate.csproj" />
     <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.Common\BuzzGUI.Common.csproj" />
     <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.MachineView\BuzzGUI.MachineView.csproj" />

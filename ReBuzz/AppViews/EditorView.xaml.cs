@@ -57,6 +57,7 @@ namespace ReBuzz
                     EditorMachines.Add(machine);
             }
             EditorMachine = EditorMachines.FirstOrDefault();
+
             PropertyChanged.Raise(this, "EditorMachine");
             PropertyChanged.Raise(this, "EditorMachines");
 
