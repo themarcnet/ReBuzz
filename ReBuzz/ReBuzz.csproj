@@ -135,6 +135,8 @@
     <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.ParameterWindow\BuzzGUI.ParameterWindow.csproj" />
     <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.PianoKeyboard\BuzzGUI.PianoKeyboard.csproj" />
     <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.ToolBar\BuzzGUI.ToolBar.csproj" />
+    <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.WaveformControl\BuzzGUI.WaveformControl.csproj" />
+    
     <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.WavetableView\BuzzGUI.WavetableView.csproj" />
     <ProjectReference Include="..\ReBuzzGUI\ModernSequenceEditorHorizontal\ModernSequenceEditorHorizontal.csproj" />
     <ProjectReference Include="..\ReBuzzGUI\ModernSequenceEditor\ModernSequenceEditor.csproj" />
