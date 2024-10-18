@@ -1163,7 +1163,7 @@ namespace ReBuzz.Core
             NewSequenceEditorActivate = true;
         }
 
-        internal event Action<FileEventType, string> FileEvent;
+        internal event Action<FileEventType, string, object> FileEvent;
         internal event Action<string> OpenFile;
 
         public void OpenSongFile(string filename)
@@ -1185,11 +1185,6 @@ namespace ReBuzz.Core
 
                 IReBuzzFile bmxFile = GetReBuzzFile(filename);
 
-                bmxFile.FileEvent += (type, eventText) =>
-                {
-                    FileEvent?.Invoke(type, eventText);
-                };
-
                 if (false)
                 {
                     // Test
@@ -1200,9 +1195,9 @@ namespace ReBuzz.Core
                 {
                     try
                     {
-                        bmxFile.FileEvent += (type, eventText) =>
+                        bmxFile.FileEvent += (type, eventText, o) =>
                         {
-                            FileEvent?.Invoke(type, eventText);
+                            FileEvent?.Invoke(type, eventText, o);
                         };
 
                         OpenFile.Invoke(filename);
@@ -1212,7 +1207,7 @@ namespace ReBuzz.Core
                     {
 
                         MessageBox.Show(e.InnerException.Message, "Error loading " + filename);
-                        bmxFile.EndFileOperation();
+                        bmxFile.EndFileOperation(false);
                         NewSong();
                         SkipAudio = false;
                         return;
@@ -1767,7 +1762,7 @@ namespace ReBuzz.Core
             {
                 var master = SongCore.MachinesList.First();
 
-                FileEvent?.Invoke(FileEventType.StatusUpdate, "Remove Connections...");
+                FileEvent?.Invoke(FileEventType.StatusUpdate, "Remove Connections...", null);
                 // Remove connections
                 foreach (var machine in SongCore.MachinesList)
                 {
@@ -1785,7 +1780,7 @@ namespace ReBuzz.Core
                     if (machine != master)
                     {
                         if (!machine.Hidden)
-                            FileEvent?.Invoke(FileEventType.StatusUpdate, "Remove Machine " + machine.Name);
+                            FileEvent?.Invoke(FileEventType.StatusUpdate, "Remove Machine " + machine.Name, null);
 
                         // Remove machine
                         RemoveMachine(machine);
@@ -1809,7 +1804,7 @@ namespace ReBuzz.Core
                 }
 
 
-                FileEvent?.Invoke(FileEventType.StatusUpdate, "Clear Wavetable...");
+                FileEvent?.Invoke(FileEventType.StatusUpdate, "Clear Wavetable...", null);
                 // Clear Wavetable
                 for (int i = 0; i < songCore.WavetableCore.WavesList.Count; i++)
                 {
@@ -1822,7 +1817,7 @@ namespace ReBuzz.Core
 
                 // Clear pattern and sequece
                 master.PatternsList.Clear();
-                FileEvent?.Invoke(FileEventType.Close, "Done.");
+                FileEvent?.Invoke(FileEventType.Close, "Done.", null);
             }
 
             // Center Master position
@@ -1929,6 +1924,16 @@ namespace ReBuzz.Core
                     SetPatternEditorPattern(PatternEditorPattern);
             }
             return ret;
+        }
+
+        internal void NotifyOpenFile(string filename)
+        {
+            OpenFile.Invoke(filename);
+        }
+
+        internal void NotifyFileEvent(FileEventType type, string eventText, object o)
+        {
+            FileEvent.Invoke(type, eventText, o);
         }
     }
 
