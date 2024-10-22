@@ -10,6 +10,10 @@
 
 using BuzzGUI::Common::Global;
 using BuzzGUI::Interfaces::IIndex;
+using BuzzGUI::Interfaces::IWave;
+using BuzzGUI::Interfaces::IWaveLayer;
+using BuzzGUI::Interfaces::ISequence;
+using BuzzGUI::Interfaces::IParameterGroup;
 
 using Buzz::MachineInterface::SubTickInfo;
 
@@ -18,6 +22,8 @@ namespace ReBuzz
 {
     namespace NativeMachineFramework
     {
+      
+
         MachineCallbackWrapper::MachineCallbackWrapper(MachineWrapper^ mw, 
                                                         IBuzzMachine^  netmach,
                                                         IBuzzMachineHost^ host,
@@ -57,6 +63,11 @@ namespace ReBuzz
             }
 
             m_netmcahine.Free();
+        }
+
+        int MachineCallbackWrapper::GetHostVersion()
+        {
+            return 3;
         }
 
         CMachineInterfaceEx* MachineCallbackWrapper::GetExInterface() const
@@ -183,6 +194,23 @@ namespace ReBuzz
             return machdata->name.c_str();
         }
 
+        void MachineCallbackWrapper::GetMachineNames(CMachineDataOutput* pout)
+        {
+            //Ask ReBuzz for list of machines
+            for each (IMachine^ mach in Global::Buzz->Song->Machines)
+            {
+                //Make sure machine manager has this machine, and get the machine data.
+                //The machine data will then contain the c++ version of the name
+                void * pbuzzmach = m_machineWrapper.GetRef()->GetCMachine(mach);
+                CMachineData* machdata = m_machineWrapper.GetRef()->GetBuzzMachineData(pbuzzmach);
+                if (machdata != NULL)
+                {
+                    pout->Write(machdata->name.c_str());
+                }
+            } 
+        }
+
+
         CMachine* MachineCallbackWrapper::GetMachine(char const* name)
         {
             return m_machineWrapper.GetRef()->GetCMachineByName(name);
@@ -228,6 +256,17 @@ namespace ReBuzz
             return patdata->name.c_str();
         }
 
+        CPattern* MachineCallbackWrapper::GetPatternByName(CMachine* pmac, const char* name)
+        {
+            //Get the rebuzz machine
+            IMachine^ rebuzzMach = m_machineWrapper.GetRef()->GetReBuzzMachine(pmac);
+            if (rebuzzMach == nullptr)
+                return NULL;
+
+            //Query pattern manager
+            return m_machineWrapper.GetRef()->GetCPatternByName(rebuzzMach, name);
+        }
+
         int MachineCallbackWrapper::GetPatternLength(CPattern* p)
         {
             //Get the rebuzz pattern
@@ -236,6 +275,18 @@ namespace ReBuzz
                 return 0;
 
             return pat->Length;
+        }
+
+        void MachineCallbackWrapper::SetPatternLength(CPattern* p, int length)
+        {
+            //Tell machine wrapper about the change
+            m_machineWrapper.GetRef()->UpdatePattern(p, length, NULL);
+        }
+
+        void MachineCallbackWrapper::SetPatternName(CPattern* p, const char * name)
+        {
+            //Tell machine wrapper about the change
+            m_machineWrapper.GetRef()->UpdatePattern(p, -1, name);
         }
 
         void MachineCallbackWrapper::SetPatternEditorStatusText(int pane, char const* text)
@@ -262,7 +313,200 @@ namespace ReBuzz
             //Convert the CLR string
             String^ clrText = Utils::stdStringToCLRString(outputText);
             Global::Buzz->DCWriteLine(clrText);
-            //Global.Buzz.DCWriteLine("{statusbar}" + e.ToString());
+            
+        }
+
+        CMachine* MachineCallbackWrapper::GetPatternOwner(CPattern* p)
+        {
+            //Get pattern
+            IPattern^ rebuzzPattern =  m_machineWrapper.GetRef()->GetReBuzzPattern(p);
+            if (rebuzzPattern == nullptr)
+                return NULL;
+
+            //Get the machine that owns this patter
+            IMachine^ rebuzzMachine = rebuzzPattern->Machine;
+            
+            CMachine* buzzMach = (CMachine *)m_machineWrapper.GetRef()->GetCMachine(rebuzzMachine);
+            return buzzMach;
+        }
+
+        void MachineCallbackWrapper::RemapLoadedMachineName(char* name, int bufsize)
+        {
+            //Find machine by name
+            CMachine * buzzmach = (CMachine *)m_machineWrapper.GetRef()->GetCMachineByName(name);
+            if (buzzmach == NULL)
+                return;
+
+            //Get the machine data
+            CMachineData* machdata = m_machineWrapper.GetRef()->GetBuzzMachineData(buzzmach);
+            if (machdata != NULL)
+            {
+                //Make sure the name buffer is big enough?
+                //(I'm not sure if this is what this callback is supposed to do.
+                //I am guessing by what PatternXP is doing)
+                if (bufsize > machdata->name.size())
+                    machdata->name.resize(bufsize);
+            }
+
+        }
+
+        CWaveLevel const* MachineCallbackWrapper::GetNearestWaveLevel(int const i, int const note)
+        {
+            //These are some versioning hacks (?)
+            if (i == -1 && note == -1)
+            {
+
+            }
+            else if (i == -2 && note == -2)
+            {
+                return (CWaveLevel const*)-1;
+            }
+            else if (i == -3 && note == -3)
+            {
+                return (CWaveLevel const*)-1;
+            }
+            
+            
+            int index = i - 1;
+            if((index < 0) || (index >= Global::Buzz->Song->Wavetable->Waves->Count))
+                return NULL;
+
+            IWaveLayer^ foundLevel = nullptr;
+            IWave^ wav = Global::Buzz->Song->Wavetable->Waves[i - 1];
+            for each (IWaveLayer^ wavlevl in wav->Layers)
+            {
+                if (wavlevl->RootNote > note)
+                    break;
+
+                foundLevel = wavlevl;
+            }
+
+            if (foundLevel == nullptr)
+                return NULL;
+
+            //Convert from ReBuzz IWaveLayer to Buzz
+            CWaveLevel* ret = m_machineWrapper.GetRef()->GetWaveLevel(foundLevel);
+            return ret;
+        }
+
+        CSequence* MachineCallbackWrapper::GetPlayingSequence(CMachine* pmac)
+        {
+            //Get the rebuzz machine
+            IMachine^ rebuzzMachine = m_machineWrapper.GetRef()->GetReBuzzMachine(pmac);
+            if (rebuzzMachine == nullptr)
+                return NULL;
+
+            //find the sequence
+            for each (ISequence^ seq in Global::Buzz->Song->Sequences)
+            {
+                if((seq->PlayingPattern != nullptr) &&  (seq->Machine == rebuzzMachine))
+                {
+                    //Convert sequence to Buzz
+                    CSequence* buzzseq = m_machineWrapper.GetRef()->GetSequence(seq);
+                    return buzzseq;
+                }
+            } 
+
+            return NULL;
+        }
+
+        CPattern* MachineCallbackWrapper::GetPlayingPattern(CSequence* pseq)
+        {
+            // Convert sequence to ReBuzz
+            ISequence^ buzzseq = m_machineWrapper.GetRef()->GetReBuzzSequence(pseq);
+            if (buzzseq == nullptr)
+                return NULL;
+
+            //Get the pattern
+            IPattern^ playingPattern = buzzseq->PlayingPattern;
+            return reinterpret_cast<CPattern*>( m_machineWrapper.GetRef()->GetCPattern(playingPattern));
+        }
+
+        int MachineCallbackWrapper::GetSequenceColumn(CSequence* s) 
+        {
+            // Convert sequence to ReBuzz
+            ISequence^ buzzseq = m_machineWrapper.GetRef()->GetReBuzzSequence(s);
+            if (buzzseq == nullptr)
+                return -1;
+
+            //Go through the sequences 
+            int curCol = 0;
+            for each (ISequence^ seq in Global::Buzz->Song->Sequences)
+            {
+                if (seq == buzzseq)
+                    return curCol;
+
+                ++curCol;
+            }
+
+            return -1;
+        }
+
+        int MachineCallbackWrapper::GetStateFlags()
+        {
+            int ret = 0;
+
+            if (Global::Buzz->Recording)
+                ret |= SF_RECORDING;
+
+            if (Global::Buzz->Playing)
+                ret |= SF_PLAYING;
+
+            return ret;
+        }
+
+        void MachineCallbackWrapper::ControlChange(CMachine* pmac, int group, int track, int param, int value)
+        {
+            //Get the machine internal data
+            CMachineData* machdata = m_machineWrapper.GetRef()->GetBuzzMachineData(pmac);
+            if (machdata == NULL)
+                return;
+
+            //Store parameter change in machine data.
+            //These will get sent to the machine when SendControlChange is called
+            int  changePos = machdata->paramChanges.size();
+            machdata->paramChanges.resize(changePos + 1);
+
+            ParamChange & change = machdata->paramChanges[changePos];
+            change.group = group & 0xF;
+            change.track = track;
+            change.param = param;
+            change.value = value;
+            change.noRecord = (group & 0x10) == 0x10; //16 = no record
+        }
+
+        void MachineCallbackWrapper::SendControlChanges(CMachine* pmac)
+        {
+            //Get the machine internal data
+            CMachineData* machdata = m_machineWrapper.GetRef()->GetBuzzMachineData(pmac);
+            if (machdata == NULL)
+                return;
+
+            //Get rebuzz machine
+            IMachine^ rebuzzmach = m_machineWrapper.GetRef()->GetReBuzzMachine(pmac);
+            if (rebuzzmach == nullptr)
+                return;
+
+            for (const auto& changeitr : machdata->paramChanges)
+            {
+                if (changeitr.group < rebuzzmach->ParameterGroups->Count)
+                {
+                    IParameterGroup^ pg = rebuzzmach->ParameterGroups[changeitr.group];
+                    if (pg != nullptr)
+                    {
+                        if (changeitr.param < pg->Parameters->Count)
+                        {
+                            IParameter^ p = pg->Parameters[changeitr.param];
+                            p->SetValue(changeitr.track | 1 << 16, changeitr.value);
+                        }
+                    }
+                }
+            }
+
+            machdata->paramChanges.clear();
+
+            //Tell machine about the control changes
+            rebuzzmach->SendControlChanges();
         }
     }
 }

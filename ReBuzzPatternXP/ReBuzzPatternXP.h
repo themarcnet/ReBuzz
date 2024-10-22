@@ -24,6 +24,7 @@ using ReBuzz::NativeMachineFramework::MachineWrapper;
 
 #include "..\..\Buzz\MachineInterface.h"
 #include <MachineCallbackWrapper.h>
+#include "RefClassWrapper.h"
 
 
 [MachineDecl(Name = "Pattern XP Editor", ShortName = "PXP", Author = "WDE/MarCNeT", MaxTracks = 8, InputCount = 0, OutputCount = 0)]
@@ -56,8 +57,7 @@ public:
     void SetPatternName(String^ machine, String^ oldName, String^ newName);
 
     int GetTicksPerBeatDelegate(IPattern^ pattern, int playPosition);
-    
-    void ControlChange(IMachine^ machine, int group, int track, int param, int value);
+   
 
     void SetModifiedFlag();
 
@@ -135,4 +135,5 @@ private:
     MachineWrapper^ m_machineWrapper;
     bool m_initialised;
     void* m_callbackdata;
+    ReBuzz::NativeMachineFramework::RefClassWrapper<UserControl> * m_patternEditor;
 };

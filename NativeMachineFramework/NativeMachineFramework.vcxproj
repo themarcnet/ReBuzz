@@ -156,18 +156,22 @@
     </ClCompile>
     <ClCompile Include="MachineCallbackWrapper.cpp" />
     <ClCompile Include="MachineEventWrapper.cpp" />
+    <ClCompile Include="MachineManager.cpp" />
     <ClCompile Include="MachineWrapper.cpp" />
     <ClCompile Include="NativeMFCMachineControl.cpp" />
+    <ClCompile Include="PatternManager.cpp" />
     <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BuzzDataTypes.h" />
     <ClInclude Include="MachineCallbackWrapper.h" />
     <ClInclude Include="MachineEventWrapper.h" />
+    <ClInclude Include="MachineManager.h" />
     <ClInclude Include="MachineWrapper.h" />
     <ClInclude Include="NativeMachineReader.h" />
     <ClInclude Include="NativeMachineWriter.h" />
     <ClInclude Include="NativeMFCMachineControl.h" />
+    <ClInclude Include="PatternManager.h" />
     <ClInclude Include="RebuzzBuzzLookup.h" />
     <ClInclude Include="RefClassWrapper.h" />
     <ClInclude Include="Utils.h" />

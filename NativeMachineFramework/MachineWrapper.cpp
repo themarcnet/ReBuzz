@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <map>
 
 #include "Buzz\MachineInterface.h"
 
@@ -22,282 +23,42 @@ namespace ReBuzz
 {
     namespace NativeMachineFramework
     {
-        struct MachineCreateCallbackData
+        
+       
+        void MachineWrapper::OnSequenceCreatedByReBuzz(int seq)
         {
-            RefClassWrapper< MachineWrapper> machineWrapper;
-            std::map<std::string, uint64_t> machineNameMap;
-            OnNewPatternCallback onNewPatternCallback;
-            void* callbackParam;
-        };
 
-        //This callback is called when a new CMachine * map entry is created.
-        //The purpose of this is to populate the machine info, so that the 
-        static void CreateMachineCallback(void* mach, void* param)
-        {
-            MachineCreateCallbackData* machCallbackData = reinterpret_cast<MachineCreateCallbackData*>(param);
-
-            //Use machine wrapper to convert from CMachine * to ReBuzz machine
-            CMachine* buzzMach = reinterpret_cast<CMachine*>(mach);
-            IMachine^ rebuzzMach = machCallbackData->machineWrapper.GetRef()->GetReBuzzMachine(buzzMach);
-            if (rebuzzMach == nullptr)
-                return;
-
-            //Get the emulation type, as this contains info about the machine
-            CMachineData* machdata = machCallbackData->machineWrapper.GetRef()->GetBuzzMachineData(buzzMach);
-            if (machdata == NULL)
-                return;
-
-            //Use ReBuzz to get info about the machine, and populate the CMachineInfo
-            Utils::CLRStringToStdString(rebuzzMach->DLL->Info->Author, machdata->author);
-            machdata->m_info.Author = machdata->author.c_str();
-            Utils::CLRStringToStdString(rebuzzMach->DLL->Info->Name, machdata->name);
-            machdata->m_info.Name = machdata->name.c_str();
-            Utils::CLRStringToStdString(rebuzzMach->DLL->Info->ShortName, machdata->shortname);
-            machdata->m_info.ShortName = machdata->shortname.c_str();
-
-            machdata->m_info.Version = MI_VERSION;
-            machdata->m_info.minTracks = rebuzzMach->DLL->Info->MinTracks;
-            machdata->m_info.maxTracks = rebuzzMach->DLL->Info->MaxTracks;
-            switch (rebuzzMach->DLL->Info->Type)
-            {
-                case MachineType::Master:
-                    machdata->m_info.Type = MT_MASTER;
-                    break;
-                case MachineType::Effect:
-                    machdata->m_info.Type = MT_EFFECT;
-                    break;
-                case MachineType::Generator:
-                    machdata->m_info.Type = MT_GENERATOR;
-                    break;
-            }
-           
-            //Flags
-            machdata->m_info.Flags = 0;
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::ALWAYS_SHOW_PLUGS) == MachineInfoFlags::ALWAYS_SHOW_PLUGS)
-                machdata->m_info.Flags |= MIF_ALWAYS_SHOW_PLUGS;
-            
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::MONO_TO_STEREO) == MachineInfoFlags::MONO_TO_STEREO)
-                machdata->m_info.Flags |= MIF_MONO_TO_STEREO;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::PLAYS_WAVES) == MachineInfoFlags::PLAYS_WAVES)
-                machdata->m_info.Flags |= MIF_PLAYS_WAVES;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::USES_LIB_INTERFACE) == MachineInfoFlags::USES_LIB_INTERFACE)
-                machdata->m_info.Flags |= MIF_USES_LIB_INTERFACE;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::USES_INSTRUMENTS) == MachineInfoFlags::USES_INSTRUMENTS)
-                machdata->m_info.Flags |= MIF_USES_INSTRUMENTS;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::DOES_INPUT_MIXING) == MachineInfoFlags::DOES_INPUT_MIXING)
-                machdata->m_info.Flags |= MIF_DOES_INPUT_MIXING;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::NO_OUTPUT) == MachineInfoFlags::NO_OUTPUT)
-                machdata->m_info.Flags |= MIF_NO_OUTPUT;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::CONTROL_MACHINE) == MachineInfoFlags::CONTROL_MACHINE)
-                machdata->m_info.Flags |= MIF_CONTROL_MACHINE;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::INTERNAL_AUX) == MachineInfoFlags::INTERNAL_AUX)
-                machdata->m_info.Flags |= MIF_INTERNAL_AUX;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::EXTENDED_MENUS) == MachineInfoFlags::EXTENDED_MENUS)
-                machdata->m_info.Flags |= MIF_EXTENDED_MENUS;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::PATTERN_EDITOR) == MachineInfoFlags::PATTERN_EDITOR)
-                machdata->m_info.Flags |= MIF_PATTERN_EDITOR;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::PE_NO_CLIENT_EDGE) == MachineInfoFlags::PE_NO_CLIENT_EDGE)
-                machdata->m_info.Flags |= MIF_PE_NO_CLIENT_EDGE;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::GROOVE_CONTROL) == MachineInfoFlags::GROOVE_CONTROL)
-                machdata->m_info.Flags |= MIF_GROOVE_CONTROL;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::DRAW_PATTERN_BOX) == MachineInfoFlags::DRAW_PATTERN_BOX)
-                machdata->m_info.Flags |= MIF_DRAW_PATTERN_BOX;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::STEREO_EFFECT) == MachineInfoFlags::STEREO_EFFECT)
-                machdata->m_info.Flags |= MIF_STEREO_EFFECT;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::MULTI_IO) == MachineInfoFlags::MULTI_IO)
-                machdata->m_info.Flags |= MIF_MULTI_IO;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::PREFER_MIDI_NOTES) == MachineInfoFlags::PREFER_MIDI_NOTES)
-                machdata->m_info.Flags |= MIF_PREFER_MIDI_NOTES;
-
-            if ((rebuzzMach->DLL->Info->Flags & MachineInfoFlags::LOAD_DATA_RUNTIME) == MachineInfoFlags::LOAD_DATA_RUNTIME)
-                machdata->m_info.Flags |= MIF_LOAD_DATA_RUNTIME;
-
-            //Get and convert attributes
-            machdata->m_info.numAttributes = 0;
-            for each (IAttribute^ attr in rebuzzMach->Attributes)
-            {
-                std::shared_ptr<CMachineAttribute> buzzAttr = std::make_shared<CMachineAttribute>();
-                buzzAttr->DefValue = attr->DefValue;
-                buzzAttr->MaxValue = attr->MaxValue;
-                buzzAttr->MinValue = attr->MinValue;
-                
-                std::shared_ptr<std::string> buzzAttrName = std::make_shared<std::string>();
-                Utils::CLRStringToStdString(attr->Name, *buzzAttrName);
-                buzzAttr->Name = buzzAttrName->c_str();
-
-                //Store attribute
-                machdata->attributes.push_back(buzzAttr);
-                machdata->attributePointers.push_back(buzzAttr.get());
-                machdata->attributeNames.push_back(buzzAttrName);
-
-                //Increase attribute count
-                machdata->m_info.numAttributes += 1;
-            }
-
-            if (machdata->attributePointers.empty())
-                machdata->m_info.Attributes = NULL;
-            else
-                machdata->m_info.Attributes = machdata->attributePointers.data();
-            
-            //Get and convert commands
-            for each (IMenuItem ^ cmd in rebuzzMach->Commands)
-            {
-                //Native Buzz stored commands in a char * array, separated with a \n
-                std::string text;
-                Utils::CLRStringToStdString(cmd->Text, text);
-
-                if (!machdata->commands.empty())
-                    machdata->commands.append("\n");
-
-                machdata->commands.append(text);
-            }
-
-            if (machdata->commands.empty())
-                machdata->m_info.Commands = NULL;
-            else
-                machdata->m_info.Commands = machdata->commands.c_str();
-            
-            
-            //Okay, now do parameters
-            //From what I can gather - Parameter group 1 are global parameters
-            //and Parameter group 2 are track parameters
-            //I've no idea what parameter group 0 is for.
-            //What could have been useful here , is a 'type' enum on each group, so I 
-            //don't have to hard-code group numbers here, and can just go by the 'Type' enum value.
-            machdata->m_info.numGlobalParameters = 0;
-            machdata->m_info.numTrackParameters = 0;
-            int grpNum = 0;
-            for each (IParameterGroup ^ grp in rebuzzMach->ParameterGroups)
-            {
-                if((grpNum != 1) && (grpNum != 2))
-                {
-                    ++grpNum;
-                    continue;
-                }
-
-                for each (IParameter ^ param in grp->Parameters)
-                {
-                    std::shared_ptr<CMachineParameter> buzzParam = std::make_shared<CMachineParameter>();
-                    buzzParam->DefValue = param->DefValue;
-                    buzzParam->MaxValue = param->MaxValue;
-                    buzzParam->MinValue = param->MinValue;
-                    buzzParam->NoValue = param->NoValue;
-                    switch (param->Type)
-                    {
-                        case ParameterType::Note:
-                            buzzParam->Type = pt_note;
-                            break;
-                        case ParameterType::Byte:
-                            buzzParam->Type = pt_byte;
-                            break;
-                        case ParameterType::Internal:
-                            buzzParam->Type = pt_internal;
-                            break;
-                        case ParameterType::Switch:
-                            buzzParam->Type = pt_switch;
-                            break;
-                        case ParameterType::Word:
-                            buzzParam->Type = pt_word;
-                            break;
-                    }
-
-                    buzzParam->Flags = 0;
-                    if ((param->Flags & ParameterFlags::Ascii) == ParameterFlags::Ascii)
-                        buzzParam->Flags |= MPF_ASCII;
-
-                    if ((param->Flags & ParameterFlags::State) == ParameterFlags::State)
-                        buzzParam->Flags |= MPF_STATE;
-
-                    if ((param->Flags & ParameterFlags::TickOnEdit) == ParameterFlags::TickOnEdit)
-                        buzzParam->Flags |= MPF_TICK_ON_EDIT;
-
-                    if ((param->Flags & ParameterFlags::TiedToNext) == ParameterFlags::TiedToNext)
-                        buzzParam->Flags |= MPF_TIE_TO_NEXT;
-
-                    if ((param->Flags & ParameterFlags::Wave) == ParameterFlags::Wave)
-                        buzzParam->Flags |= MPF_WAVE;
-
-                    std::shared_ptr<std::string> desc = std::make_shared<std::string>();
-                    Utils::CLRStringToStdString(param->Description, *desc);
-                    buzzParam->Description = desc->c_str();
-
-                    std::shared_ptr<std::string> name = std::make_shared<std::string>();
-                    Utils::CLRStringToStdString(param->Name, *name);
-                    buzzParam->Name = name->c_str();
-
-
-                    machdata->parameters.push_back(buzzParam);
-                    machdata->parameterPtrs.push_back(buzzParam.get());
-                    machdata->paramDescriptions.push_back(desc);
-                    machdata->paramDescriptions.push_back(name);
-
-                    if (grpNum == 1)
-                        machdata->m_info.numGlobalParameters += 1;
-                    else if(grpNum == 2)
-                        machdata->m_info.numTrackParameters += 1;
-                }
-
-                ++grpNum;
-            }
-
-            if (machdata->parameterPtrs.empty())
-                machdata->m_info.Parameters = NULL;
-            else
-                machdata->m_info.Parameters = machdata->parameterPtrs.data();
-
-            //Store the internal id against the machine name
-            uint64_t id = rebuzzMach->GetHashCode();
-            machCallbackData->machineNameMap[machdata->name] = id;
         }
 
-        static void CreatePatternCallback(void* pat, void* param)
+        void MachineWrapper::OnSequecneRemovedByReBuzz(int seq)
         {
-            MachineCreateCallbackData* machCallbackData = reinterpret_cast<MachineCreateCallbackData*>(param);
 
-            //Get the emulation type, as this contains info about the pattern
-            CPattern* buzzPat = reinterpret_cast<CPattern*>(pat);
-            CPatternData* patdata = machCallbackData->machineWrapper.GetRef()->GetBuzzPatternData(buzzPat);
-            if (patdata == NULL)
+        }
+
+        static void updateWaveLevel(CWaveLevel* buzzwavlevel, IWaveLayer^ rebuzzWaveLayer)
+        {
+            //Populate the buzz wave level
+            buzzwavlevel->LoopEnd = rebuzzWaveLayer->LoopEnd;
+            buzzwavlevel->LoopStart = rebuzzWaveLayer->LoopStart;
+            buzzwavlevel->numSamples = rebuzzWaveLayer->SampleCount;
+            buzzwavlevel->SamplesPerSec = rebuzzWaveLayer->SampleRate;
+            buzzwavlevel->pSamples = (short*)rebuzzWaveLayer->RawSamples.ToPointer();
+        }
+
+        static void  OnNewBuzzWaveLevel(void* item, void* param)
+        {
+            /*MachineCreateCallbackData* machCallbackData = reinterpret_cast<MachineCreateCallbackData*>(param);
+
+            //Get the rebuzz class
+            CWaveLevel* buzzwavlevel = reinterpret_cast<CWaveLevel*>(item);
+            IWaveLayer^ rebuzzWaveLayer = machCallbackData->machineWrapper.GetRef()->GetReBuzzWaveLevel(buzzwavlevel);
+            if (rebuzzWaveLayer == nullptr)
                 return;
 
-            //Get the ReBuzz pattern
-            IPattern^ rebuzzPattern = machCallbackData->machineWrapper.GetRef()->GetReBuzzPattern(buzzPat);
-
-            //Get the patten name, and store into the pattern data
-            Utils::CLRStringToStdString(rebuzzPattern->Name, patdata->name);
-
-            //Call the callback that was set on construction
-            machCallbackData->onNewPatternCallback(buzzPat, machCallbackData->callbackParam);
+            updateWaveLevel(buzzwavlevel, rebuzzWaveLayer);*/
         }
 
-        void MachineWrapper::OnMachineCreatedByReBuzz(IMachine^ machine)
-        {
-            //Do we have this machine in our map?
-            uint64_t id = machine->GetHashCode();
-            CMachine* pmach = m_machineMap->GetBuzzTypeById(id);
-            if (pmach == NULL)
-            {
-                //Create machine. This will also trigger the above 'CreateMachineCallback'
-                m_machineMap->GetOrStoreReBuzzTypeById(id, machine);
-            }
-        }
-
-        void MachineWrapper::OnMachineRemovedByReBuzz(IMachine^ machine)
+        static void OnNewSequence(void* item, void* param)
         {
         }
 
@@ -305,30 +66,31 @@ namespace ReBuzz
                                        IBuzzMachineHost^ host,
                                        IBuzzMachine^ buzzmachine,
                                         void* callbackparam,
-                                        OnNewPatternCallback onNewPatternCallback) : 
+                                        KeyboardFocusWindowHandleCallback kbcallback,
+                                        OnPatternEditorRedrawCallback redrawcallback) : 
+                                                                     m_thisref(new RefClassWrapper<MachineWrapper>(this)),
                                                                      m_machine((CMachineInterface *)machine),
+                                                                     m_thisCMachine(NULL),
                                                                      m_host(host),
                                                                      m_hwndEditor(NULL),
                                                                      m_initialised(false),
                                                                      m_buzzmachine(buzzmachine),
-                                                                     m_onNewPatternCallback(onNewPatternCallback),
-                                                                     m_callbackParam(callbackparam),
                                                                      m_patternEditorPattern(NULL),
                                                                      m_patternEditorMachine(NULL),
-                                                                     m_control(nullptr)
+                                                                     m_control(nullptr),
+                                                                     m_kbFocusWndcallback(kbcallback),
+                                                                     m_kbFocusCallbackParam(callbackparam),
+                                                                     m_onKeyDownHandler(nullptr),
+                                                                     m_onKeyupHandler(nullptr)
         {
-            //Create callback data for our machine creation callback
-            MachineCreateCallbackData* machCallbackData = new MachineCreateCallbackData();
-            m_machineCallbackData = machCallbackData;
-            machCallbackData->machineWrapper.Assign(this);
-            machCallbackData->onNewPatternCallback = onNewPatternCallback;
-            machCallbackData->callbackParam = callbackparam;
+            //Create machine manager
+            m_machineMgr = gcnew MachineManager();
 
-            m_patternMap = new RebuzzBuzzLookup< IPattern, CPatternData, CPattern>(CreatePatternCallback, m_machineCallbackData);
-            m_machineMap = new RebuzzBuzzLookup< IMachine, CMachineData, CMachine>(CreateMachineCallback, m_machineCallbackData);
+            //Create pattern manager
+            m_patternMgr = gcnew PatternManager(NULL, redrawcallback, callbackparam);
 
-            //Create ref wrapper around this for window callbacks
-            m_thisref = new RefClassWrapper<MachineWrapper>(this);
+            m_waveLevelsMap = new RebuzzBuzzLookup<IWaveLayer, int, CWaveLevel>(OnNewBuzzWaveLevel, m_mapCallbackData);
+            m_sequenceMap = new RebuzzBuzzLookup<ISequence, int, CSequence>(OnNewSequence, m_mapCallbackData);
 
             //Register add this machine to the machine map
             if (host->Machine != nullptr)
@@ -339,58 +101,84 @@ namespace ReBuzz
             //Allocate some master info
             m_masterInfo = new CMasterInfo();
 
-            //Ask ReBuzz to tell us when a machine has been added
-            m_machineAddedAction = gcnew System::Action<IMachine^>(this, &MachineWrapper::OnMachineCreatedByReBuzz);
-            Global::Buzz->Song->MachineAdded += m_machineAddedAction;
+            //Ask ReBuzz to tell us when a sequence has been added
+            m_seqAddedAction = gcnew System::Action<int>(this, &MachineWrapper::OnSequenceCreatedByReBuzz);
+            Global::Buzz->Song->SequenceAdded += m_seqAddedAction;
 
-            //Ask ReBuzz to tell us when a machine has been deleted
-            m_machineRemovedAction = gcnew System::Action<IMachine^>(this, &MachineWrapper::OnMachineRemovedByReBuzz);
-            Global::Buzz->Song->MachineRemoved += m_machineRemovedAction;
+            //Ask ReBuzz to tell us when a sequence has been removed
+            m_seqRemovedAction = gcnew System::Action<int>(this, &MachineWrapper::OnSequecneRemovedByReBuzz);
+            Global::Buzz->Song->SequenceRemoved += m_seqRemovedAction;
         }
 
         MachineWrapper::~MachineWrapper()
         {
-            //Unregister events
-            Global::Buzz->Song->MachineAdded -= m_machineAddedAction;
-            Global::Buzz->Song->MachineRemoved -= m_machineRemovedAction;
-            delete m_machineAddedAction;
-            delete m_machineRemovedAction;
+            Global::Buzz->Song->SequenceAdded -= m_seqAddedAction;
+            Global::Buzz->Song->SequenceRemoved -= m_seqRemovedAction;
+
+            
+            delete m_seqAddedAction;
+            delete m_seqRemovedAction;
+
+            if (m_control != nullptr)
+            {
+                if (m_onKeyDownHandler != nullptr)
+                {
+                    m_control->KeyDown -= this->m_onKeyDownHandler;
+                    delete m_onKeyDownHandler;
+                    m_onKeyDownHandler = nullptr;
+                }
+
+                if (m_onKeyupHandler != nullptr)
+                {
+                    m_control->KeyUp -= this->m_onKeyupHandler;
+                    delete m_onKeyupHandler;
+                    m_onKeyupHandler = nullptr;
+                }
+            }
 
             m_machine->pCB = NULL; //Callbacks no longer available...
-            delete m_callback;
-            delete m_patternMap;
-            delete m_machineMap;
-            delete m_thisref;
+            delete m_callbackWrapper;
+            delete m_waveLevelsMap;
+            delete m_sequenceMap;
+
+
+            //Delete machine manager
+            delete m_machineMgr;
+
+            //Delete pattern manager
+            delete m_patternMgr;
+
             delete m_masterInfo;
-            
-            MachineCreateCallbackData* machCallbackData = reinterpret_cast<MachineCreateCallbackData*>(m_machineCallbackData);
-            delete machCallbackData;
         }
 
         void MachineWrapper::Init()
         {
             if (!m_initialised && (m_host->Machine != nullptr))
             {
-                uint64_t id = m_host->Machine->GetHashCode();
-                CMachine* m = m_machineMap->GetOrStoreReBuzzTypeById(id, m_host->Machine);
+                //Store this machine
+                m_thisCMachine = m_machineMgr->GetOrStoreMachine(m_host->Machine);
 
                 //populate master info
                 m_machine->pMasterInfo = m_masterInfo;
                 
                 //Create callback wrapper class
-                m_callback = new MachineCallbackWrapper(this, m_buzzmachine, m_host, m_machine, m, m_masterInfo);
+                m_callbackWrapper = new MachineCallbackWrapper(this, m_buzzmachine, m_host, m_machine, m_thisCMachine, m_masterInfo);
 
                 //Set the callback instance on the machine interface 
-                m_machine->pCB = (CMICallbacks*)m_callback;
+                m_machine->pCB = (CMICallbacks*)m_callbackWrapper;
 
                 //Collect the patterns
                 for each (IPattern ^ p in m_host->Machine->Patterns)
                 {
-                    m_patternMap->GetOrStoreReBuzzTypeById(p->GetHashCode(), p);
+                    m_patternMgr->GetOrStorePattern(p);
                 }
 
                 //Finally init the actual machine
                 m_machine->Init(NULL);
+
+                //We should have an ExInterface at this point, so tell the patten manager
+                CMachineInterfaceEx* exiface = m_callbackWrapper->GetExInterface();
+                m_patternMgr->SetExInterface(exiface);
 
                 m_initialised = true;
             }
@@ -398,7 +186,7 @@ namespace ReBuzz
 
         CMachineInterfaceEx* MachineWrapper::GetExInterface()
         {
-            return m_callback->GetExInterface();
+            return m_callbackWrapper->GetExInterface();
         }
 
         void MachineWrapper::SetEditorPattern(IPattern^ pattern)
@@ -407,14 +195,13 @@ namespace ReBuzz
             Init();
 
             //Store pattern ref (if not already stored)
-            uint64_t patid = pattern->GetHashCode();
-            CPattern * pat = m_patternMap->GetOrStoreReBuzzTypeById(patid, pattern);
+            CPattern * pat = m_patternMgr->GetOrStorePattern(pattern);
 
-            uint64_t machid = pattern->Machine->GetHashCode();
-            CMachine* patMach = m_machineMap->GetOrStoreReBuzzTypeById(machid, pattern->Machine);
+            //Store the machine ref (if not already stored)
+            CMachine* patMach = m_machineMgr->GetOrStoreMachine(pattern->Machine);
 
             //Get ex interface
-            CMachineInterfaceEx* exInterface = m_callback->GetExInterface();
+            CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
             if (exInterface != NULL)
             {
                 //Tell pattern editor, if the pattern editor is active
@@ -433,14 +220,47 @@ namespace ReBuzz
             else
             {
                 //Tell callback to call the mathods when the exInterface has been set
-                m_callback->SetDelayedEditorPattern(patMach, pat);
+                m_callbackWrapper->SetDelayedEditorPattern(patMach, pat);
             }
+        }
+
+        void MachineWrapper::SendMessageToKeyboardWindow(UINT msg,WPARAM wparam, LPARAM lparam)
+        {   
+            //If a keyboard window callback has been specified, then call it
+            //to get the window that we should be fowarding the windows message to
+            HWND hwndSendMsg = m_hwndEditor;
+            if (m_kbFocusWndcallback != NULL)
+            {
+                HWND hwnd = (HWND)m_kbFocusWndcallback(m_kbFocusCallbackParam);
+                if (hwnd != NULL)
+                    hwndSendMsg = hwnd;
+            }
+            
+            //Set focus on the keyboard focus window
+            SetForegroundWindow(m_hwndEditor);
+            SetFocus(hwndSendMsg);
+            SetActiveWindow(hwndSendMsg);
+
+            //Send the windows message
+            SendMessage(hwndSendMsg, msg, wparam,lparam);
+        }
+
+     
+        void MachineWrapper::OnKeyDown(Object^ sender, KeyEventArgs^ args)
+        {
+            SendMessageToKeyboardWindow(WM_KEYDOWN , (WPARAM)args->KeyValue, 0);
+        }
+
+        void MachineWrapper::OnKeyUp(Object^ sender, KeyEventArgs^ args)
+        {
+            SendMessageToKeyboardWindow(WM_KEYUP, (WPARAM)args->KeyValue, 0);
         }
 
         IntPtr MachineWrapper::RebuzzWindowAttachCallback(IntPtr hwnd, void* callbackParam)
         {
             //Get machine wrapper
             RefClassWrapper<MachineWrapper>* classRef = reinterpret_cast<RefClassWrapper<MachineWrapper> *>(callbackParam);
+            classRef->GetRef()->Init();
 
             //Get ex interface
             CMachineInterfaceEx* exInterface = (CMachineInterfaceEx*)classRef->GetRef()->GetExInterface();
@@ -453,7 +273,8 @@ namespace ReBuzz
 
             //If we have a pattern to set, then do that now
             //(it was deferred from earlier)
-            if( (classRef->GetRef()->m_patternEditorMachine != NULL) && 
+            if( (classRef->GetRef()->m_initialised) &&
+                (classRef->GetRef()->m_patternEditorMachine != NULL) && 
                 (classRef->GetRef()->m_patternEditorPattern != NULL))
             {
                 exInterface->SetPatternTargetMachine(classRef->GetRef()->m_patternEditorPattern, 
@@ -463,6 +284,13 @@ namespace ReBuzz
                 classRef->GetRef()->m_patternEditorPattern = NULL;
                 classRef->GetRef()->m_patternEditorMachine = NULL;
             }
+
+            //Create and register window event
+            classRef->GetRef()->m_onKeyDownHandler = gcnew KeyEventHandler(classRef->GetRef(), &MachineWrapper::OnKeyDown);
+            classRef->GetRef()->m_control->KeyDown += classRef->GetRef()->m_onKeyDownHandler;
+
+            classRef->GetRef()->m_onKeyupHandler = gcnew KeyEventHandler(classRef->GetRef(), &MachineWrapper::OnKeyUp);
+            classRef->GetRef()->m_control->KeyUp += classRef->GetRef()->m_onKeyupHandler;
 
             return IntPtr(patternEditorHwnd);
         }
@@ -500,6 +328,9 @@ namespace ReBuzz
                 DetatchCallback^ onDetatch = gcnew DetatchCallback(RebuzzWindowDettachCallback);
                 SizeChangedCallback^ onSzChanged = gcnew SizeChangedCallback(RebuzzWindowSizeCallback);
                 m_control = gcnew NativeMFCMachineControl(onAttach, onDetatch, onSzChanged, m_thisref);
+
+                //Register for events
+                m_control->KeyDown += m_onKeyDownHandler;
             }
 
             return m_control;
@@ -525,38 +356,39 @@ namespace ReBuzz
         void MachineWrapper::RecordControlChange(IParameter^ parameter, int track, int value)
         {
             //Get Ex Interface for calling the machine
-            CMachineInterfaceEx* exInterface = m_callback->GetExInterface();
+            CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
 
-            //Get our CMachine * 
-            CMachine* mach = m_machineMap->GetBuzzTypeById(m_thisMachineId);
-
-            //Find the parameter group and parameter number values
-            int paramNum = -1;
-            int groupNum = FindParameterGroupAndParam(m_host->Machine, parameter, &paramNum);
-            if (groupNum >= 0)
+            if (m_thisCMachine != NULL)
             {
-                //Call the machine
-                exInterface->RecordControlChange(mach, groupNum, track, paramNum, value);
+                //Get our CMachine * 
+                CMachine* mach = m_thisCMachine;
+
+                //Find the parameter group and parameter number values
+                int paramNum = -1;
+                int groupNum = FindParameterGroupAndParam(m_host->Machine, parameter, &paramNum);
+                if (groupNum >= 0)
+                {
+                    //Call the machine
+                    exInterface->RecordControlChange(mach, groupNum, track, paramNum, value);
+                }
             }
         }
 
         void MachineWrapper::SetTargetMachine(IMachine^ machine)
         {
             //Get Ex Interface for calling the machine
-            CMachineInterfaceEx* exInterface = m_callback->GetExInterface();
+            CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
 
             //MC: I'm guessing here that setting the target machine ALSO sets
             //    the pattern as well
             // As we don't have the pattern, just pick the first
 
             //Get machine
-            uint64_t machid = machine->GetHashCode();
-            CMachine* mach = m_machineMap->GetOrStoreReBuzzTypeById(machid, machine);
+            CMachine* mach =  m_machineMgr->GetOrStoreMachine(machine);
 
             //Get first pattern (is this the correct thing to do? - we're not told the pattern otherwise)
             IPattern^ pattern = machine->Patterns[0];
-            uint64_t patid = pattern->GetHashCode();
-            CPattern* pat = m_patternMap->GetOrStoreReBuzzTypeById(patid, pattern);
+            CPattern* pat = m_patternMgr->GetOrStorePattern(pattern);
 
             exInterface->SetPatternTargetMachine(pat, mach);
         }
@@ -564,7 +396,7 @@ namespace ReBuzz
         void MachineWrapper::SetPatternName(String^ machine, String^ oldName, String^ newName)
         {
             //Get Ex Interface for calling the machine
-            CMachineInterfaceEx* exInterface = m_callback->GetExInterface();
+            /*CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
 
             //Get the machine
             for each (IMachine ^ m in Global::Buzz->Song->Machines)
@@ -577,8 +409,7 @@ namespace ReBuzz
                         if((p->Name == newName) || (p->Name == oldName))
                         {
                             //Get the CPattern for this patter
-                            uint64_t id = p->GetHashCode();
-                            CPattern* pat = m_patternMap->GetOrStoreReBuzzTypeById(id, p);
+                            CPattern* pat = m_patternMgr->GetOrStorePattern(p);
 
                             //Convert the string to c
                             std::string cstrName;
@@ -593,80 +424,96 @@ namespace ReBuzz
                     }
 
                 }
-            }
+            }*/
         }
 
         void * MachineWrapper::GetCPattern(IPattern^ p)
         {
-            if (p == nullptr)
-                return NULL;
-
-            uint64_t patid = p->GetHashCode();
-            return m_patternMap->GetBuzzTypeById(patid);
+            return m_patternMgr->GetOrStorePattern(p);
         }
 
         IPattern^ MachineWrapper::GetReBuzzPattern(void* pat)
         {
-            if (pat == NULL)
-                return nullptr;
-
-            return m_patternMap->GetReBuzzTypeByBuzzType(reinterpret_cast<CPattern *>( pat));
+            return m_patternMgr->GetReBuzzPattern(reinterpret_cast<CPattern *>(pat));
         }
 
         IMachine^ MachineWrapper::GetReBuzzMachine(void* mach)
         {
-            if (mach == NULL)
-                return nullptr;
-
-            return m_machineMap->GetReBuzzTypeByBuzzType(reinterpret_cast<CMachine*>(mach));
+            return m_machineMgr->GetReBuzzMachine(reinterpret_cast<CMachine*>(mach));
         }
 
         CMachineData* MachineWrapper::GetBuzzMachineData(void* mach)
         {
-            if (mach == NULL)
-                return NULL;
-
-            return m_machineMap->GetBuzzEmulationType(reinterpret_cast<CMachine*>(mach));
+            return m_machineMgr->GetBuzzMachineData(reinterpret_cast<CMachine*>(mach));
         }
 
         CPatternData* MachineWrapper::GetBuzzPatternData(void* pat)
         {
-            if (pat == NULL)
-                return NULL;
+            return m_patternMgr->GetBuzzPatternData(reinterpret_cast<CPattern*>(pat));
+        }
 
-            return m_patternMap->GetBuzzEmulationType(reinterpret_cast<CPattern*>(pat));
+        CPattern* MachineWrapper::GetCPatternByName(IMachine^ rebuzzmac, const char* name)
+        {
+            return m_patternMgr->GetPatternByName(rebuzzmac, name);
+        }
+
+        void MachineWrapper::UpdatePattern(CPattern* pat, int newLen, const char * newName)
+        {
+            m_patternMgr->OnNativePatternChange(pat, newLen, newName);
         }
 
         void* MachineWrapper::GetCMachine(IMachine^ m)
         {
-            if (m == nullptr)
-                return NULL;
-
-            uint64_t machid = m->GetHashCode();
-            return m_machineMap->GetOrStoreReBuzzTypeById(machid, m);
+            return m_machineMgr->GetOrStoreMachine(m);
         }
 
         CMachine * MachineWrapper::GetCMachineByName(const char* name)
         {
-            //Names are stored in callback data
-            MachineCreateCallbackData* machCallbackData = reinterpret_cast<MachineCreateCallbackData*>(m_machineCallbackData);
-            const auto& found = machCallbackData->machineNameMap.find(name);
-            if (found == machCallbackData->machineNameMap.end())
+            return m_machineMgr->GetCMachineByName(name);
+        }
+
+        CWaveLevel* MachineWrapper::GetWaveLevel(IWaveLayer^ wavelayer)
+        {
+            if (wavelayer == nullptr)
                 return NULL;
 
-            return m_machineMap->GetBuzzTypeById((*found).second);
+            uint64_t id = wavelayer->GetHashCode();
+            CWaveLevel* ret =  m_waveLevelsMap->GetOrStoreReBuzzTypeById(id, wavelayer);
+
+            //ReBuzz does not notify us of changes to IWaveLayer, so we need to manually update the return data
+            updateWaveLevel(ret, wavelayer);
+            return ret;
         }
+
+        IWaveLayer^ MachineWrapper::GetReBuzzWaveLevel(CWaveLevel* wavelevel)
+        {
+            if (wavelevel == NULL)
+                return nullptr;
+
+            return m_waveLevelsMap->GetReBuzzTypeByBuzzType(wavelevel);
+        }
+
+        CSequence* MachineWrapper::GetSequence(ISequence^ seq)
+        {
+            uint64_t id = seq->GetHashCode();
+            return m_sequenceMap->GetOrStoreReBuzzTypeById(id, seq);
+        }
+
+        ISequence^ MachineWrapper::GetReBuzzSequence(CSequence* seq)
+        {
+            return m_sequenceMap->GetReBuzzTypeByBuzzType(seq);
+        }
+
 
         void MachineWrapper::ControlChange(IMachine^ machine, int group, int track, int param, int value)
         {
             //Get machine
-            uint64_t machid = machine->GetHashCode();
-            CMachine* mach = m_machineMap->GetOrStoreReBuzzTypeById(machid, machine);
+            CMachine* mach = m_machineMgr->GetOrStoreMachine(machine);
 
             //Not sure how to do this one?
             //
-            CMachineInterfaceEx* exInterface = m_callback->GetExInterface();
-            exInterface->RecordControlChange(mach, group, track, param, value);
+            CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
+            //exInterface->RecordControlChange(mach, group, track, param, value);
         }
 
         void MachineWrapper::SetModifiedFlag()
@@ -702,7 +549,7 @@ namespace ReBuzz
                 return false; //not supported.
 
             //Ask buzz machine
-            CMachineInterfaceEx* exInterface = m_callback->GetExInterface();
+            CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
             return exInterface->EnableCommandUI(nativeCmd);
         }
 
@@ -724,7 +571,7 @@ namespace ReBuzz
 
         void MachineWrapper::MidiControlChange(int ctrl, int channel, int value)
         {
-            CMachineInterfaceEx* exInterface = m_callback->GetExInterface();
+            CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
             exInterface->MidiControlChange(ctrl, channel, value);
         }
 
@@ -753,17 +600,17 @@ namespace ReBuzz
         {
             //Get pattern
             uint64_t patid = pattern->GetHashCode();
-            CPattern* pat = m_patternMap->GetOrStoreReBuzzTypeById(patid, pattern);
+            CPattern* pat = m_patternMgr->GetOrStorePattern(pattern);
 
             //Save data 
-            CMachineInterfaceEx* exInterface = m_callback->GetExInterface();
+            CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
             NativeMachineWriter output;
             exInterface->ExportMidiEvents(pat, &output);
 
             //Get data 
             const unsigned char* srcdata = output.dataPtr();
             if (srcdata == NULL)
-                return nullptr;
+                return gcnew cli::array<int>(0); //empty array. Returning null crashes sequence editor
 
             //Convert to .NET array
             cli::array<int>^ retArray = gcnew cli::array<int>(output.size() / sizeof(int));
@@ -778,8 +625,7 @@ namespace ReBuzz
                 return;
 
             //Get pattern
-            uint64_t patid = pattern->GetHashCode();
-            CPattern* pat = m_patternMap->GetOrStoreReBuzzTypeById(patid, pattern);
+            CPattern* pat = m_patternMgr->GetOrStorePattern(pattern);
 
             //Convert data from .NET to native
             std::vector<unsigned char> nativeData(data->Length * sizeof(int));
@@ -788,16 +634,17 @@ namespace ReBuzz
             NativeMachineReader input(&nativeData[0], nativeData.size());
 
             //Load data
-            CMachineInterfaceEx* exInterface = m_callback->GetExInterface();
+            CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
             exInterface->ImportMidiEvents(pat, &input);
         }
 
         void MachineWrapper::Activate()
         {
-            if (m_hwndEditor)
+            if (m_hwndEditor != NULL)
             {
                 SetForegroundWindow(m_hwndEditor);
                 SetActiveWindow(m_hwndEditor);
+                SetFocus(m_hwndEditor);
             }
         }
 
@@ -813,17 +660,16 @@ namespace ReBuzz
         void MachineWrapper::CreatePatternCopy(IPattern^ pnew, IPattern^ p)
         {
             //Get old pattern
-            uint64_t oldpatid = p->GetHashCode();
-            CPattern* oldPat = m_patternMap->GetOrStoreReBuzzTypeById(oldpatid, p);
+            CPattern* oldPat = m_patternMgr->GetOrStorePattern(p);
 
-            uint64_t newpatid = p->GetHashCode();
-            CPattern* newPat = m_patternMap->GetOrStoreReBuzzTypeById(newpatid, p);
+            ///Get new pattern
+            CPattern* newPat = m_patternMgr->GetOrStorePattern(pnew);
 
             if ((oldPat == NULL) || (newPat == NULL))
                 return;
 
             //Get old pattern data
-            CMachineInterfaceEx* exInterface = m_callback->GetExInterface();
+            CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
             exInterface->CreatePatternCopy(newPat, oldPat);
         }
 
@@ -840,5 +686,55 @@ namespace ReBuzz
             m_masterInfo->TicksPerBeat = m_host->MasterInfo->TicksPerBeat;
             m_masterInfo->TicksPerSec = m_host->MasterInfo->TicksPerSec;
         }
+
+        void MachineWrapper::Tick()
+        {
+            //Update master info
+            //This copies the master info from ReBuzz into the
+            //CMasterInfo pointer attached to the native machine
+            UpdateMasterInfo();
+
+            //Call tick on machine on the stroke of every tick
+            if (m_initialised && (m_machine != NULL) && m_masterInfo->PosInTick == 0)
+            {   
+                //Tell the machine to tick
+                m_machine->Tick();
+            }
+        }
+
+        void MachineWrapper::NotifyOfPlayingPattern()
+        {
+            CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
+
+            //Get sequences and tell machine about them
+            for each (ISequence ^ s in Global::Buzz->Song->Sequences)
+            {
+                if (!s->IsDisabled)
+                {
+                    //Ignore any sequence that does not have a playing sequence
+                    IPattern^ playingPat = s->PlayingPattern;
+                    if((playingPat != nullptr) && (playingPat->PlayPosition >= 0))
+                    {
+                        //Get CPattern * for this pattern
+                        CPattern* cpat = m_patternMgr->GetOrStorePattern(playingPat);
+                        if (cpat != NULL)
+                        {
+                            //Get CSequence * for this sequence
+                            uint64_t seqid = s->GetHashCode();
+                            CSequence* cseq = m_sequenceMap->GetOrStoreReBuzzTypeById(seqid, s);
+                            if (cseq != NULL)
+                            {
+                                //Tell interface about this pattern and the current play position within
+                                //that pattern.
+                                int playpos = s->PlayingPatternPosition;
+                                exInterface->PlayPattern(cpat, cseq, playpos);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        
     }
 }

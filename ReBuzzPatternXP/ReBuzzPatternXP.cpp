@@ -1,4 +1,3 @@
-
 //For some calls, we need access to the raw mi class members.
 //In order to do that, because mi is self contained within a single source file, we have to 
 //include PatternXp.cpp
@@ -19,6 +18,7 @@ using namespace ReBuzz::NativeMachineFramework;
 
 using BuzzGUI::Interfaces::PatternEvent;
 using BuzzGUI::Interfaces::IParameterGroup;
+using BuzzGUI::Common::Global;
 
 using System::IntPtr;
 using System::Collections::Generic::IEnumerable;
@@ -35,38 +35,27 @@ struct ReBuzzPatternXpCallbackData
 
 //Callbacks
 
-//This gets called everytime MachineWrapper needs to create a new CPattern
-//We can use the CPattern to get the ReBuzz IPattern (since the MachineWrapper 
-// pattern data map is populated by the time this callback is called), get the patten
-// length (number of rows), and tell Pattern XP about the new CPattern
-// PatternXP just uses CPattern * instances as unique ids for patterns, the actual
-// data inside the CPattern class does not matter.
-static void OnNewPattern(void* pat, void* param)
+static void * GetKeyboardFocusWindow(void* param)
 {
     ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(param);
-    
-    //If the pattern already exists in pattern xp, this call can be ignored
-    CPattern* buzzpat = reinterpret_cast<CPattern*>(pat);
-    if (callbackData->machine->patterns.find(buzzpat) != callbackData->machine->patterns.end())
-        return;
 
-    //Lookup the pattern
-    MachineWrapper^ mw = callbackData->machineWrapper.GetRef();
-    
-    IPattern^ rebuzzPattern = mw->GetReBuzzPattern(buzzpat);
+    mi* pmi = reinterpret_cast<mi*>(callbackData->machineInterface);
+    return pmi->patEd->pe.GetSafeHwnd();
+}
 
-    //Tell pattern XP to associated the buzz pattern stored in MachineWrapper with
-    //a new pattern
-    if (rebuzzPattern != nullptr)
-    {
-        callbackData->machineInterfaceEx->CreatePattern(buzzpat, rebuzzPattern->Length);
-    }
+static void RedrawEditorWindow(void* param)
+{
+    ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(param);
+
+    mi* pmi = reinterpret_cast<mi*>(callbackData->machineInterface);
+    pmi->patEd->RedrawWindow();
 }
 
 //=====================================================
 ReBuzzPatternXpMachine::ReBuzzPatternXpMachine(IBuzzMachineHost^ host) : m_host(host),
                                                                          m_dummyParam(false),
-                                                                         m_initialised(false)
+                                                                         m_initialised(false),
+                                                                         m_patternEditor(NULL)
 {
     m_interface = CreateMachine();
     
@@ -80,10 +69,11 @@ ReBuzzPatternXpMachine::ReBuzzPatternXpMachine(IBuzzMachineHost^ host) : m_host(
     m_callbackdata = cbdata;
 
     //Create machine wrapper
-    m_machineWrapper = gcnew MachineWrapper(m_interface, host, (IBuzzMachine^)this, cbdata, OnNewPattern);
-    cbdata->machineWrapper.Assign(m_machineWrapper);
+    m_machineWrapper = gcnew MachineWrapper(m_interface, host, (IBuzzMachine^)this, cbdata, 
+                                            GetKeyboardFocusWindow, 
+                                            RedrawEditorWindow);
 
-   
+    cbdata->machineWrapper.Assign(m_machineWrapper);
 }
 
 ReBuzzPatternXpMachine::~ReBuzzPatternXpMachine()
@@ -93,23 +83,24 @@ ReBuzzPatternXpMachine::~ReBuzzPatternXpMachine()
     
     ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(m_callbackdata);
     delete callbackData;
+
+    delete m_patternEditor;
 }
 
 void ReBuzzPatternXpMachine::Work()
 {
-    //Make sure we're initialised
-    if (!m_initialised)
+    //Make sure we're initialised before working...
+    if(m_initialised && (m_patternEditor != NULL) && (m_interface != NULL))
     {
-        m_machineWrapper->Init();
-        m_initialised = true;
-    }
+        //Tick the machine / native buzz machine wrapper
+        m_machineWrapper->Tick();
 
-    if (m_interface != NULL)
-    {
-        //Update master info
-        //This copies the master info from ReBuzz into the
-        //CMasterInfo pointer attached to the native machine
-        m_machineWrapper->UpdateMasterInfo();
+        //If we're currently playing, Make sure the machine is told to play a pattern
+        if (Global::Buzz->Playing && (m_host->MasterInfo->PosInTick == 0))
+        {   
+            //Tell native wrapper to tell the pattern editor about the playing pattern
+            m_machineWrapper->NotifyOfPlayingPattern();
+        }
 
         //The parameters are not used by 'Work', so just put anything in....
         m_interface->Work(NULL, 0, 0);
@@ -137,7 +128,13 @@ UserControl^ ReBuzzPatternXpMachine::PatternEditorControl()
         m_initialised = true;
     }
 
-    return m_machineWrapper->PatternEditorControl();
+    if (m_patternEditor != NULL)
+    {
+        return m_patternEditor->GetRef();
+    }
+
+    m_patternEditor = new RefClassWrapper<UserControl>(m_machineWrapper->PatternEditorControl());
+    return m_patternEditor->GetRef();
 }
 
 void ReBuzzPatternXpMachine::SetEditorPattern(IPattern^ pattern)
@@ -192,34 +189,6 @@ int ReBuzzPatternXpMachine::GetTicksPerBeatDelegate(IPattern^ pattern, int playP
     return (*foundPattern).second->rowsPerBeat;
 }
 
-void ReBuzzPatternXpMachine::ControlChange(IMachine^ machine, int group, int track, int param, int value)
-{   
-    //m_machineWrapper->ControlChange(machine, group, track, param, value);
-
-    //Get the machine
-    CMachine* mach = reinterpret_cast<CMachine *>( m_machineWrapper->GetCMachine(machine));
-    if (mach == NULL)
-        return;
-
-    //Go through the patterns
-    const mi* pmi = reinterpret_cast<const mi*>(m_interface);
-    if (!pmi->writingToPattern)
-        return;
-
-    for (const auto& pat : pmi->patterns)
-    {
-        //Go through the columns
-        for (const auto& col : pat.second->columns)
-        {
-            //If this is a match then set the value
-            if (col->MatchBuzzParam(mach, group, track, param))
-            {   
-                col->SetValue(pmi->writeRow, value);
-                return;
-            }
-        }
-    }
-}
 
 void ReBuzzPatternXpMachine::SetModifiedFlag()
 {

@@ -12,9 +12,11 @@ namespace ReBuzz
         class Utils
         {
         public:
+            
             static void CLRStringToStdString(String^ str, std::string& out);
 
             static String^ stdStringToCLRString(const std::string& str);
+
         };
     }
 }

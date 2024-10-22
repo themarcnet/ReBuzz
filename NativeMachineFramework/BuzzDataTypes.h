@@ -7,6 +7,14 @@ namespace ReBuzz
 {
     namespace NativeMachineFramework
     {
+        struct ParamChange
+        {
+            int group;
+            int param;
+            int track;
+            int value;
+            bool noRecord;
+        };
 
         struct CMachineData
         {
@@ -30,6 +38,7 @@ namespace ReBuzz
             std::vector<std::shared_ptr< CMachineParameter>> parameters;
             std::vector<const CMachineParameter  *> parameterPtrs;
             std::vector< std::shared_ptr<std::string>> paramDescriptions;
+            std::vector<ParamChange> paramChanges;
         };
 
         struct CPatternData
@@ -39,6 +48,12 @@ namespace ReBuzz
             //of a CPattern is, only that it is unique for the pattern data.
             unsigned char m_machineBytes[32];
             std::string name; //Storage for the pattern name
+            int length;
+        };
+
+        struct CWaveLevelData
+        {
+            std::vector<short> samples;
         };
     }
 }

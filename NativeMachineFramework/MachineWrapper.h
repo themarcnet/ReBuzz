@@ -5,13 +5,18 @@
 #include "BuzzDataTypes.h"
 #include "Buzz\MachineInterface.h"
 #include "MachineCallbackWrapper.h"
+#include "MachineManager.h"
+#include "PatternManager.h"
 
 using System::Windows::Forms::UserControl;
+using System::Windows::Forms::KeyEventArgs;
+using System::Windows::Forms::KeyEventHandler;
 using System::String;
 
 using BuzzGUI::Interfaces::IPattern;
 using BuzzGUI::Interfaces::IParameter;
 using BuzzGUI::Interfaces::BuzzCommand;
+using BuzzGUI::Interfaces::ISequence;
 using Buzz::MachineInterface::IBuzzMachine;
 
 
@@ -21,16 +26,21 @@ namespace ReBuzz
     {
         typedef OnNewBuzzLookupItemCallback OnNewPatternCallback;
 
+        typedef void* (*KeyboardFocusWindowHandleCallback)(void* param);
+
+        typedef OnPatternEditorRedrawCallback OnPatEditorRedrawCallback(void* param);
+
         public ref class MachineWrapper
         {
         public:
             MachineWrapper( void * machine, IBuzzMachineHost^ host, IBuzzMachine^ buzzmachine,
                             void * callbackparam,
-                            OnNewPatternCallback onNewPatternCallback);
+                            KeyboardFocusWindowHandleCallback kbcallback,
+                            OnPatternEditorRedrawCallback redrawcallback);
+
             ~MachineWrapper();
 
             void Init();
-
 
             UserControl^ PatternEditorControl();
 
@@ -53,8 +63,20 @@ namespace ReBuzz
             CMachineData* GetBuzzMachineData(void* mach);
 
             CPatternData* GetBuzzPatternData(void* pat);
+
+            CPattern* GetCPatternByName(IMachine^ rebuzzmac, const char* name);
             
             CMachine * GetCMachineByName(const char * name);
+
+            CWaveLevel* GetWaveLevel(IWaveLayer^ wavelayer);
+
+            IWaveLayer^ GetReBuzzWaveLevel(CWaveLevel* wavelevel);
+
+            CSequence* GetSequence(ISequence^ seq);
+
+            ISequence^ GetReBuzzSequence(CSequence* seq);
+
+            void UpdatePattern(CPattern* pat, int newLen, const char * newName);
 
             void ControlChange(IMachine^ machine, int group, int track, int param, int value);
 
@@ -84,38 +106,58 @@ namespace ReBuzz
 
             void UpdateMasterInfo();
 
+            void NotifyOfPlayingPattern();
+
+            void Tick();
+
+            
         private:
             static IntPtr RebuzzWindowAttachCallback(IntPtr hwnd, void* callbackParam);
             static void RebuzzWindowDettachCallback(IntPtr cwnd, void* callbackParam);
             static void RebuzzWindowSizeCallback(IntPtr patternEditorHwnd, void* callbackParam, int left, int top, int width, int height);
+            
+            void OnSequenceCreatedByReBuzz(int seq);
+            void OnSequecneRemovedByReBuzz(int seq);
 
-            void OnMachineCreatedByReBuzz(IMachine^ machine);
-            void OnMachineRemovedByReBuzz(IMachine^ machine);
+            void OnKeyDown(Object^ sender, KeyEventArgs^ args);
+            void OnKeyUp(Object^ sender, KeyEventArgs^ args);
 
-            RebuzzBuzzLookup< IMachine, CMachineData, CMachine> * m_machineMap;
-            RebuzzBuzzLookup<IPattern, CPatternData, CPattern> * m_patternMap;
-            RefClassWrapper< MachineWrapper> * m_thisref;
+            void SendMessageToKeyboardWindow(UINT msg, WPARAM wparam, LPARAM lparam);
 
+            
+            
+            RebuzzBuzzLookup<IWaveLayer, int, CWaveLevel> * m_waveLevelsMap;
+            RebuzzBuzzLookup<ISequence, int, CSequence>* m_sequenceMap;
+            
+            MachineManager^ m_machineMgr;
+            PatternManager^ m_patternMgr;
 
-            MachineCallbackWrapper * m_callback;
+            RefClassWrapper<MachineWrapper> * m_thisref;
+            MachineCallbackWrapper * m_callbackWrapper;
             CMachineInterface* m_machine;
-            uint64_t m_thisMachineId;
+            CMachine* m_thisCMachine;
             IBuzzMachineHost^ m_host;
             HWND m_hwndEditor;
             bool m_initialised;
             IBuzzMachine^ m_buzzmachine;
             CMasterInfo* m_masterInfo;
-            void* m_machineCallbackData;
+            void* m_mapCallbackData;
+            
 
-            OnNewPatternCallback m_onNewPatternCallback;
-            void* m_callbackParam;
-
+           
             CPattern * m_patternEditorPattern;
             CMachine* m_patternEditorMachine;
 
-            System::Action<IMachine^>^ m_machineAddedAction;
-            System::Action<IMachine^>^ m_machineRemovedAction;
+           
+            System::Action<int>^ m_seqAddedAction;
+            System::Action<int>^ m_seqRemovedAction;
             UserControl^ m_control;
+
+            KeyboardFocusWindowHandleCallback m_kbFocusWndcallback;
+            void* m_kbFocusCallbackParam;
+            KeyEventHandler^ m_onKeyDownHandler;
+            KeyEventHandler^ m_onKeyupHandler;
+        
         };
     }
 }

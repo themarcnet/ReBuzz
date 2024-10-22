@@ -8,6 +8,7 @@ using namespace  System::Runtime::InteropServices;
 using Buzz::MachineInterface::IBuzzMachineHost;
 using Buzz::MachineInterface::IBuzzMachine;
 using BuzzGUI::Interfaces::IMachine;
+using BuzzGUI::Interfaces::IWaveLayer;
 using System::IntPtr;
 
 
@@ -48,11 +49,27 @@ namespace ReBuzz
             CMachineInfo const* GetMachineInfo(CMachine* pmac) override;
             char const* GetMachineName(CMachine* pmac) override;
             CMachine* GetMachine(char const* name) override;
+            void GetMachineNames(CMachineDataOutput* pout) override;
             dword GetThemeColor(char const* name) override;
             int GetNumTracks(CMachine* pmac) override;
             char const* GetPatternName(CPattern* ppat) override;
+            CPattern* GetPatternByName(CMachine* pmac, const char* name) override;
             void SetPatternEditorStatusText(int pane, char const* text) override;
             int GetPatternLength(CPattern* p) override;
+            void SetPatternLength(CPattern* p, int length) override;
+            void SetPatternName(CPattern* p, char const* name) override;
+
+            CMachine* GetPatternOwner(CPattern* p) override;
+            void RemapLoadedMachineName(char* name, int bufsize) override;
+            CWaveLevel const* GetNearestWaveLevel(int const i, int const note) override;
+            int GetHostVersion() override;
+            CSequence* GetPlayingSequence(CMachine* pmac) override;
+            CPattern* GetPlayingPattern(CSequence* pseq) override;
+            int GetSequenceColumn(CSequence* s) override;
+            int GetStateFlags() override;
+            void ControlChange(CMachine* pmac, int group, int track, int param, int value) override;
+            void SendControlChanges(CMachine* pmac) override;
+            
 
             //------------------------------------------------------------------------------------
             //API that is delayed - to be called API when exInterface is set
@@ -65,7 +82,7 @@ namespace ReBuzz
         private:
 
             void UpdateMasterInfo();
-
+            
 
             RefClassWrapper<IBuzzMachine> m_netmcahine;
             RefClassWrapper<IBuzzMachineHost> m_machinehost;
@@ -86,6 +103,7 @@ namespace ReBuzz
 
             std::string m_statusBarText0;
             std::string m_statusBarText1;
+            
         };
 
     }
