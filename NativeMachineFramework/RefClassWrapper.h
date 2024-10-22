@@ -1,20 +1,22 @@
 #pragma once
 
 using namespace  System::Runtime::InteropServices;
+using System::IntPtr;
 
 namespace ReBuzz
 {
     namespace NativeMachineFramework
     {
-
+        //Utility template class to wrap a CLR reference (^) in a C++ class, since
+        //CLR referneces cannot be used as direct members in a non CLR C++ class.
         template<class T>
         class RefClassWrapper
         {
         public:
-            inline RefClassWrapper() : m_classrefPtr(0)
+            inline RefClassWrapper() : m_classrefPtr(nullptr)
             {}
 
-            inline RefClassWrapper(T^ ref) : m_classrefPtr(0)
+            inline RefClassWrapper(T^ ref) : m_classrefPtr(nullptr)
             {
                 assign(ref);
             }
@@ -32,7 +34,7 @@ namespace ReBuzz
 
             inline bool isNull() const
             {
-                return m_classrefPtr == 0;
+                return m_classrefPtr == nullptr;
             }
 
             inline void Assign(T^ ref)
@@ -44,18 +46,18 @@ namespace ReBuzz
 
             inline void Free()
             {
-                if (m_classrefPtr != 0)
+                if (m_classrefPtr != nullptr)
                 {
                     GCHandle handle = GCHandle::FromIntPtr(IntPtr(m_classrefPtr));
                     handle.Free();
-                    m_classrefPtr = 0;
+                    m_classrefPtr = nullptr;
                 }
             }
 
 
             inline T^ GetRef()
             {
-                if (m_classrefPtr == 0)
+                if (m_classrefPtr == nullptr)
                     return nullptr;
 
                 GCHandle handle = GCHandle::FromIntPtr(IntPtr(m_classrefPtr));

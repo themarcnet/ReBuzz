@@ -52,6 +52,8 @@ namespace ReBuzz
             }
         }
 
+       
+
         /*void NativeMFCMachineControl::OnPaint(PaintEventArgs^ args)
         {
             UserControl::OnPaint(args);

@@ -1,11 +1,12 @@
 #pragma once
 
-#include <map>
+#include <unordered_map>
 #include <memory>
 #include <mutex>
 #include "RefClassWrapper.h"
 
 #include <mutex>
+#include <functional>
 
 namespace ReBuzz
 {
@@ -17,6 +18,10 @@ namespace ReBuzz
         class RebuzzBuzzLookup
         {
         public:
+
+            typedef void (*ForEachCallback)(RebuzzType^ rebuzz, const BuzzType* buzztype, const BuzzTypeEmulation* betype, void * callbackparam);
+
+            
             RebuzzBuzzLookup(OnNewBuzzLookupItemCallback onNewItemCallback,
                             void * callbackparam)  : m_onNewItemCallback(onNewItemCallback),
                                                      m_callbackParam(callbackparam)
@@ -29,8 +34,6 @@ namespace ReBuzz
             {
                 BuzzType* ret = NULL;
 
-                std::lock_guard<std::mutex> lg(m_lock);
-                
                 ret = GetBuzzTypeById_Internal(id);
                 
                 return ret;
@@ -38,8 +41,6 @@ namespace ReBuzz
 
             RebuzzType^ GetReBuzzTypeByBuzzType(BuzzType* bt)
             {
-                std::lock_guard<std::mutex> lg(m_lock);
-
                 //Get the id
                 const auto& found = m_buzzToIdMap.find(bt);
                 if (found == m_buzzToIdMap.end())
@@ -55,8 +56,6 @@ namespace ReBuzz
 
             BuzzTypeEmulation* GetBuzzEmulationType(BuzzType* bt)
             {
-                std::lock_guard<std::mutex> lg(m_lock);
-
                 //Get the id
                 const auto& found = m_buzzToIdMap.find(bt);
                 if (found == m_buzzToIdMap.end())
@@ -72,18 +71,15 @@ namespace ReBuzz
 
             BuzzType* GetOrStoreReBuzzTypeById(uint64_t id, RebuzzType^ buzztype)
             {
-                BuzzType* ret = NULL;
                 bool callCallback = false;
+                
+                BuzzType* ret = GetBuzzTypeById_Internal(id);
+                if (ret == NULL)
                 {
-                    std::lock_guard<std::mutex> lg(m_lock);
-
-                    ret = GetBuzzTypeById_Internal(id);
-                    if (ret == NULL)
-                    {
-                        ret = StoreReBuzzTypeById_Internal(id, buzztype);
-                        callCallback = true; //New item saved, call the callback after releasing the mutex
-                    }
+                    ret = StoreReBuzzTypeById_Internal(id, buzztype);
+                    callCallback = true; //New item saved, call the callback after releasing the mutex
                 }
+                
 
                 if (callCallback && (m_onNewItemCallback != NULL))
                 {
@@ -91,6 +87,26 @@ namespace ReBuzz
                 }
 
                 return ret;
+            }
+
+            void ForEachItem(ForEachCallback func, void * param)
+            {
+                for (const auto& itr : m_buzzToIdMap)
+                {
+                    const BuzzTypeEmulation* buzzemutype = NULL;
+
+                    uint64_t id = itr.second;
+                    const auto& foundemu = m_idToDataMap.find(id);
+                    if (foundemu != m_idToDataMap.end())
+                        buzzemutype = (*foundemu).second.get();
+
+                    RebuzzType^ rebuzztype = nullptr;
+                    const auto& foundrebuzzType = m_idToRefMap.find(id);
+                    if (foundrebuzzType != m_idToRefMap.end())
+                        rebuzztype = (*foundrebuzzType).second->GetRef();
+
+                    func(rebuzztype, itr.first, buzzemutype, param);
+                }
             }
 
         private:
@@ -120,11 +136,12 @@ namespace ReBuzz
                 return ret;
             }
 
+           
 
-            mutable std::mutex m_lock;
-            std::map<uint64_t, std::shared_ptr<RefClassWrapper<RebuzzType>>> m_idToRefMap;
-            std::map<uint64_t, std::shared_ptr<BuzzTypeEmulation>> m_idToDataMap;
-            std::map<BuzzType*, uint64_t> m_buzzToIdMap;
+
+            std::unordered_map<uint64_t, std::shared_ptr<RefClassWrapper<RebuzzType>>> m_idToRefMap;
+            std::unordered_map<uint64_t, std::shared_ptr<BuzzTypeEmulation>> m_idToDataMap;
+            std::unordered_map<BuzzType*, uint64_t> m_buzzToIdMap;
             OnNewBuzzLookupItemCallback m_onNewItemCallback;
             void* m_callbackParam;
         };
