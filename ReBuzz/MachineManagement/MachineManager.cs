@@ -107,6 +107,7 @@ namespace ReBuzz.MachineManagement
 
                 string name = machineName != null ? machineName : mDll.Info.ShortName;
                 buzz.RenameMachine(machine, name);
+                
 
                 if (mDll.IsManaged)
                 {
@@ -126,6 +127,7 @@ namespace ReBuzz.MachineManagement
             ManagedMachineDLL managedMachineDLL = new ManagedMachineDLL();
             managedMachineDLL.LoadManagedMachine(machine.MachineDLL.Path);
             ManagedMachineHost managedMachineHost = new ManagedMachineHost(managedMachineDLL);
+
             machine.ManagedMachine = managedMachineHost.ManagedMachine;
             UpdateMasterAndSubTickInfo(managedMachineHost); // Needs to be updated before AddMachine
             managedMachineHost.Machine = machine;

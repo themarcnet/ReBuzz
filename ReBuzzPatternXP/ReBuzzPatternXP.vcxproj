@@ -133,26 +133,26 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)..\bin\$(Platform)\$(Configuration)\net8.0-windows\Gear\Generators\</OutDir>
-    <IntDir>$(SolutionDir)..\build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\net8.0-windows\Gear\Generators\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
     <ManagedAssembly>true</ManagedAssembly>
     <TargetName>$(ProjectName).NET</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)..\bin\$(Platform)\$(Configuration)\net8.0-windows\Gear\Generators\</OutDir>
-    <IntDir>$(SolutionDir)..\build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\net8.0-windows\Gear\Generators\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
     <ManagedAssembly>true</ManagedAssembly>
     <TargetName>$(ProjectName).NET</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)..\bin\$(Platform)\$(Configuration)\net8.0-windows\Gear\Generators\</OutDir>
-    <IntDir>$(SolutionDir)..\build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\net8.0-windows\Gear\Generators\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
     <ManagedAssembly>true</ManagedAssembly>
     <TargetName>$(ProjectName).NET</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)..\bin\$(Platform)\$(Configuration)\net8.0-windows\Gear\Generators\</OutDir>
-    <IntDir>$(SolutionDir)..\build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\net8.0-windows\Gear\Generators\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
     <ManagedAssembly>true</ManagedAssembly>
     <TargetName>$(ProjectName).NET</TargetName>
   </PropertyGroup>

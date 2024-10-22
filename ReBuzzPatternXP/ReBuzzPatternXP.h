@@ -27,7 +27,7 @@ using ReBuzz::NativeMachineFramework::MachineWrapper;
 #include "RefClassWrapper.h"
 
 
-[MachineDecl(Name = "Pattern XP Editor", ShortName = "PXP", Author = "WDE/MarCNeT", MaxTracks = 8, InputCount = 0, OutputCount = 0)]
+[MachineDecl(Name = "Jeskola Pattern XP", ShortName = "PatternXP", Author = "WDE / MarCNeT", MaxTracks = 8, InputCount = 0, OutputCount = 0)]
 public ref class ReBuzzPatternXpMachine : IBuzzMachine, INotifyPropertyChanged
 {
 public:

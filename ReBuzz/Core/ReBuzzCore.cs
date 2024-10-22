@@ -611,9 +611,8 @@ namespace ReBuzz.Core
             // Init process and thread priorities
             ProcessAndThreadProfile.Profile2();
 
-            //DefaultPatternEditor = "Modern Pattern Editor";
-            DefaultPatternEditor = "ReBuzzPatternXP";
-
+            DefaultPatternEditor = "Modern Pattern Editor";
+           
             Global.GeneralSettings.PropertyChanged += GeneralSettings_PropertyChanged;
             Global.EngineSettings.PropertyChanged += EngineSettings_PropertyChanged;
 
@@ -1905,7 +1904,7 @@ namespace ReBuzz.Core
                 byte[] data = null;
                 var currentEditorMachine = machine.EditorMachine;
                 // Change it
-                if (Gear.HasSameDataFormat(machine.EditorMachine.DLL.Name, editorMachine.Name))
+                if (Gear.HasSameDataFormat(machine.EditorMachine.DLL.Info.Name, editorMachine.Info.Name))
                     data = machine.EditorMachine.Data;
 
                 lock (ReBuzzCore.AudioLock)

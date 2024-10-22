@@ -60,7 +60,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReBuzzPatternXP", "ReBuzzPa
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NativeMachineFramework", "NativeMachineFramework\NativeMachineFramework.vcxproj", "{B1D5248C-B2B6-49FE-B1E7-F77B93FA3531}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NativeMachineFrameworkUI", "NativeMachineFrameworkUI\NativeMachineFrameworkUI.csproj", "{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NativeMachineFrameworkUI", "ReBuzzGUI\NativeMachineFrameworkUI\NativeMachineFrameworkUI.csproj", "{040468CE-086E-4251-9356-69857423339E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -458,22 +458,22 @@ Global
 		{B1D5248C-B2B6-49FE-B1E7-F77B93FA3531}.Template|Any CPU.Build.0 = Release|x64
 		{B1D5248C-B2B6-49FE-B1E7-F77B93FA3531}.Template|x64.ActiveCfg = Debug|x64
 		{B1D5248C-B2B6-49FE-B1E7-F77B93FA3531}.Template|x64.Build.0 = Debug|x64
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.Debug|x64.Build.0 = Debug|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.Release|x64.ActiveCfg = Release|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.Release|x64.Build.0 = Release|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.SSE2 with symbols|Any CPU.ActiveCfg = Debug|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.SSE2 with symbols|Any CPU.Build.0 = Debug|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.SSE2 with symbols|x64.ActiveCfg = Debug|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.SSE2 with symbols|x64.Build.0 = Debug|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.Template|Any CPU.ActiveCfg = Debug|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.Template|Any CPU.Build.0 = Debug|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.Template|x64.ActiveCfg = Debug|Any CPU
-		{0E2BAAC0-66DA-4EFA-86A0-B42019689BEF}.Template|x64.Build.0 = Debug|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.Debug|x64.Build.0 = Debug|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.Release|x64.ActiveCfg = Release|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.Release|x64.Build.0 = Release|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.SSE2 with symbols|Any CPU.ActiveCfg = Debug|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.SSE2 with symbols|Any CPU.Build.0 = Debug|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.SSE2 with symbols|x64.ActiveCfg = Debug|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.SSE2 with symbols|x64.Build.0 = Debug|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.Template|Any CPU.ActiveCfg = Debug|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.Template|Any CPU.Build.0 = Debug|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.Template|x64.ActiveCfg = Debug|Any CPU
+		{040468CE-086E-4251-9356-69857423339E}.Template|x64.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
