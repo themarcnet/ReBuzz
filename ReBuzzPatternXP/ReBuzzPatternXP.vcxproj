@@ -71,6 +71,11 @@
   <ItemGroup>
     <ResourceCompile Include="PatternXPRE\patternxp\PatternXP.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="PatternXPRE\patternxp\toolbar1.bmp" />
+    <Image Include="PatternXPRE\patternxp\toolbar24.bmp" />
+    <Image Include="PatternXPRE\patternxp\treeimages.bmp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <ProjectGuid>{8EDA2AAB-8F43-4956-A0C1-DDFB7281262F}</ProjectGuid>
@@ -162,6 +167,7 @@
       <PreprocessorDefinitions>_DEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)PatternXPRE\patternxp\tree;$(ProjectDir)PatternXPRE\patternxp;$(ProjectDir)..\NativeMachineFramework;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4642</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>
@@ -174,6 +180,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)PatternXPRE\patternxp\tree;$(ProjectDir)PatternXPRE\patternxp;$(ProjectDir)..\NativeMachineFramework;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4642</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies />
@@ -185,6 +192,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)PatternXPRE\patternxp\tree;$(ProjectDir)PatternXPRE\patternxp;$(ProjectDir)..\NativeMachineFramework;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4642</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies />
@@ -196,6 +204,7 @@
       <PreprocessorDefinitions>NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)PatternXPRE\patternxp\tree;$(ProjectDir)PatternXPRE\patternxp;$(ProjectDir)..\NativeMachineFramework;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4642</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies />

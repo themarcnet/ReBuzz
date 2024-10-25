@@ -20,7 +20,6 @@ namespace ReBuzz
             std::map<int64_t, std::map<std::string, uint64_t>> patternNameMap;
         };
 
-      
         void PatternManager::OnReBuzzPatternChange(IPattern^ rebuzzpat, bool lock)
         {
             bool notifyRename = false;
@@ -37,6 +36,7 @@ namespace ReBuzz
                 if (lock)
                     lg.lock();
 
+                
                 buzzPat = m_patternMap->GetBuzzTypeById(rebuzzpat->GetHashCode());
                 if (buzzPat == NULL)
                     return;
@@ -228,16 +228,38 @@ namespace ReBuzz
             //Get the CPattern * from the name map
             PatternCreateCallbackData* patternCallbackData = reinterpret_cast<PatternCreateCallbackData*>(m_patternCallbackData);
             const auto& foundmach = patternCallbackData->patternNameMap.find(cmachineid);
-            if (foundmach == patternCallbackData->patternNameMap.end())
-                return NULL; //not found
+            bool foundMach = (foundmach != patternCallbackData->patternNameMap.end());
+            
 
-            const std::map<std::string, uint64_t>& patnameIdMap = (*foundmach).second;
-            const auto& foundname = patnameIdMap.find(name);
-            if (foundname == patnameIdMap.end())
-                return NULL; //not found
+            if (foundMach)
+            {
+                const std::map<std::string, uint64_t>& patnameIdMap = (*foundmach).second;
+                const auto& foundname = patnameIdMap.find(name);
+                if (foundname != patnameIdMap.end())
+                {
+                    return m_patternMap->GetBuzzTypeById((*foundname).second);
+                }
+            }
 
-            //Use the id to get the CPattern
-            return m_patternMap->GetBuzzTypeById((*foundname).second);
+            String^ clrPatName = Utils::stdStringToCLRString(name);
+            try
+            {
+                //Machine / Pattern do not exist. 
+                for each (IPattern ^ pat in rebuzzmac->Patterns)
+                {
+                    if (clrPatName == pat->Name)
+                    {
+                        patternCallbackData->patternNameMap[cmachineid][name] = pat->GetHashCode();                        
+                        return m_patternMap->GetOrStoreReBuzzTypeById(pat->GetHashCode(), pat);
+                    }
+                }
+            }
+            finally
+            {
+                delete clrPatName;
+            }
+
+            return NULL;
         }
 
         CPattern* PatternManager::GetOrStorePattern(IPattern^ p)

@@ -157,6 +157,7 @@ namespace ReBuzz
             {
                 //Store this machine
                 m_thisCMachine = m_machineMgr->GetOrStoreMachine(m_host->Machine);
+                m_rebuzzMachine = m_host->Machine;
 
                 //populate master info
                 m_machine->pMasterInfo = m_masterInfo;
@@ -187,6 +188,11 @@ namespace ReBuzz
         CMachineInterfaceEx* MachineWrapper::GetExInterface()
         {
             return m_callbackWrapper->GetExInterface();
+        }
+
+        IMachine^ MachineWrapper::GetThisReBuzzMachine()
+        {
+            return m_rebuzzMachine;
         }
 
         void MachineWrapper::SetEditorPattern(IPattern^ pattern)
@@ -331,6 +337,11 @@ namespace ReBuzz
 
                 //Register for events
                 m_control->KeyDown += m_onKeyDownHandler;
+
+                //Set focus on the keyboard focus window
+                SetForegroundWindow(m_hwndEditor);
+                SetFocus(m_hwndEditor);
+                SetActiveWindow(m_hwndEditor);
             }
 
             return m_control;
@@ -392,42 +403,7 @@ namespace ReBuzz
 
             exInterface->SetPatternTargetMachine(pat, mach);
         }
-
-        void MachineWrapper::SetPatternName(String^ machine, String^ oldName, String^ newName)
-        {
-            //Get Ex Interface for calling the machine
-            /*CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
-
-            //Get the machine
-            for each (IMachine ^ m in Global::Buzz->Song->Machines)
-            {
-                if (m->Name == machine)
-                {
-                    //Get the pattern
-                    for each (IPattern^ p in  m->Patterns)
-                    {
-                        if((p->Name == newName) || (p->Name == oldName))
-                        {
-                            //Get the CPattern for this patter
-                            CPattern* pat = m_patternMgr->GetOrStorePattern(p);
-
-                            //Convert the string to c
-                            std::string cstrName;
-                            Utils::CLRStringToStdString(newName, cstrName);
-
-                            //Tell the machine
-                            exInterface->RenamePattern(pat, cstrName.c_str());
-
-                            //End
-                            return;
-                        }
-                    }
-
-                }
-            }*/
-        }
-
-        void * MachineWrapper::GetCPattern(IPattern^ p)
+        void *  MachineWrapper::GetCPattern(IPattern^ p)
         {
             return m_patternMgr->GetOrStorePattern(p);
         }
@@ -452,7 +428,7 @@ namespace ReBuzz
             return m_patternMgr->GetBuzzPatternData(reinterpret_cast<CPattern*>(pat));
         }
 
-        CPattern* MachineWrapper::GetCPatternByName(IMachine^ rebuzzmac, const char* name)
+        void * MachineWrapper::GetCPatternByName(IMachine^ rebuzzmac, const char* name)
         {
             return m_patternMgr->GetPatternByName(rebuzzmac, name);
         }
@@ -671,6 +647,17 @@ namespace ReBuzz
             //Get old pattern data
             CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
             exInterface->CreatePatternCopy(newPat, oldPat);
+        }
+
+        void * MachineWrapper::CreatePattern(IMachine^ machine, const char* name, int len)
+        {
+            //Create pattern in rebuzz
+            String^ patname = Utils::stdStringToCLRString(name);
+            machine->CreatePattern(patname, len);
+
+            //Get the CPattern *
+            CPattern* cpat = m_patternMgr->GetPatternByName(machine, name);
+            return cpat;
         }
 
         void MachineWrapper::UpdateMasterInfo()

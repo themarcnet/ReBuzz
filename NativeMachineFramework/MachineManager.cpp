@@ -341,7 +341,32 @@ namespace ReBuzz
             MachineCreateCallbackData* machCallbackData = reinterpret_cast<MachineCreateCallbackData*>(m_machineCallbackData);
             const auto& found = machCallbackData->machineNameMap.find(name);
             if (found == machCallbackData->machineNameMap.end())
-                return NULL;
+            {
+                //We don't have this machine, but does ReBuzz?
+                //Convert the char * to a CLR string
+                String^ clrName = Utils::stdStringToCLRString(name);
+                CMachine* ret = NULL;
+                try
+                {
+                    for each (IMachine ^ mach in Global::Buzz->Song->Machines)
+                    {
+                        if (mach->Name == clrName)
+                        {
+                            //Found - create entry in our map
+                            uint64_t id = mach->CMachinePtr.ToInt64();
+                            ret = machCallbackData->machineMap->GetOrStoreReBuzzTypeById(id, mach);
+                            machCallbackData->machineNameMap[name] = id;
+                            break;
+                        }
+                    }
+                }
+                finally
+                {
+                    delete clrName;
+                }
+                
+                return ret;
+            }
 
             return m_machineMap->GetBuzzTypeById((*found).second);
         }

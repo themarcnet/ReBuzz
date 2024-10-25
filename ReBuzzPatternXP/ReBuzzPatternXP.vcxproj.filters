@@ -134,4 +134,15 @@
       <Filter>Source Files</Filter>
     </ResourceCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="PatternXPRE\patternxp\toolbar1.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="PatternXPRE\patternxp\treeimages.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="PatternXPRE\patternxp\toolbar24.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

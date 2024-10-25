@@ -33,6 +33,8 @@ namespace ReBuzz
 
                 if (copySz < numbytes)
                     memset(destPtr + copySz, 0, numbytes - copySz);
+
+                m_pos += copySz;
             }
 
         private:

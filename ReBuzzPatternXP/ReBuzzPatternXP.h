@@ -54,8 +54,6 @@ public:
 
     void SetPatternEditorMachine(IMachineDLL^ editorMachine);
 
-    void SetPatternName(String^ machine, String^ oldName, String^ newName);
-
     int GetTicksPerBeatDelegate(IPattern^ pattern, int playPosition);
    
 

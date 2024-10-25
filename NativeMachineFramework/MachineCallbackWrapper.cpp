@@ -264,7 +264,7 @@ namespace ReBuzz
                 return NULL;
 
             //Query pattern manager
-            return m_machineWrapper.GetRef()->GetCPatternByName(rebuzzMach, name);
+            return reinterpret_cast<CPattern *>( m_machineWrapper.GetRef()->GetCPatternByName(rebuzzMach, name));
         }
 
         int MachineCallbackWrapper::GetPatternLength(CPattern* p)

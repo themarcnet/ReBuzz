@@ -480,7 +480,7 @@ void CMICallbacks::SetMidiInputMode(MidiInputMode mode)
 
 int CMICallbacks::RemapLoadedMachineParameterIndex(CMachine* pmac, int i)
 {
-	return -1;
+	return i;
 }
 
 char const* CMICallbacks::GetThemePath()

@@ -42,6 +42,8 @@ namespace ReBuzz
 
             void Init();
 
+            IMachine^ GetThisReBuzzMachine();
+
             UserControl^ PatternEditorControl();
 
             void SetEditorPattern(IPattern^ pattern);
@@ -49,8 +51,6 @@ namespace ReBuzz
             void RecordControlChange(IParameter^ parameter, int track, int value);
 
             void SetTargetMachine(IMachine^ machine);
-
-            void SetPatternName(String^ machine, String^ oldName, String^ newName);
 
             void * GetCPattern(IPattern^ p);
 
@@ -64,7 +64,7 @@ namespace ReBuzz
 
             CPatternData* GetBuzzPatternData(void* pat);
 
-            CPattern* GetCPatternByName(IMachine^ rebuzzmac, const char* name);
+            void* GetCPatternByName(IMachine^ rebuzzmac, const char* name);
             
             CMachine * GetCMachineByName(const char * name);
 
@@ -101,6 +101,8 @@ namespace ReBuzz
             void Activate();
 
             void Release();
+
+            void * CreatePattern(IMachine^ machine, const char * name, int len);
 
             void CreatePatternCopy(IPattern^ pnew, IPattern^ p);
 
@@ -142,7 +144,7 @@ namespace ReBuzz
             IBuzzMachine^ m_buzzmachine;
             CMasterInfo* m_masterInfo;
             void* m_mapCallbackData;
-            
+            IMachine^ m_rebuzzMachine;
 
            
             CPattern * m_patternEditorPattern;
