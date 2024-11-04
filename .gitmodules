@@ -16,3 +16,6 @@
 [submodule "ReBuzzPatternXP/PatternXPRE"]
 	path = ReBuzzPatternXP/PatternXPRE
 	url = https://github.com/wasteddesign/PatternXPRE
+[submodule "ReBuzzPatternXPMod/Buzz-PatternXP"]
+	path = ReBuzzPatternXPMod/Buzz-PatternXP
+	url = https://github.com/chahur/Buzz-PatternXP

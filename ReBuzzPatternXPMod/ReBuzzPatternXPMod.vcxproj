@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Buzz-PatternXP\ChordExpert.cpp" />
+    <ClCompile Include="Buzz-PatternXP\ChordsProgression.cpp" />
+    <ClCompile Include="Buzz-PatternXP\INI.cpp" />
+    <ClCompile Include="Buzz-PatternXP\Parameters.cpp" />
+    <ClCompile Include="Buzz-PatternXP\SaveArpeggio.cpp" />
+    <ClCompile Include="Buzz-PatternXP\TonalDlg.cpp" />
+    <ClCompile Include="Buzz-PatternXP\XMemDC.cpp" />
+    <ClCompile Include="Buzz-PatternXP\ActionStack.cpp" />
+    <ClCompile Include="Buzz-PatternXP\App.cpp" />
+    <ClCompile Include="Buzz-PatternXP\ColumnDialog.cpp" />
+    <ClCompile Include="Buzz-PatternXP\EmptyWnd.cpp" />
+    <ClCompile Include="Buzz-PatternXP\PatEd.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+      <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExceptionHandling>
+      <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExceptionHandling>
+    </ClCompile>
+    <ClCompile Include="Buzz-PatternXP\RowNumWnd.cpp" />
+    <ClCompile Include="Buzz-PatternXP\ScrollWnd.cpp" />
+    <ClCompile Include="Buzz-PatternXP\ToolBar2.cpp" />
+    <ClCompile Include="Buzz-PatternXP\TopWnd.cpp" />
+    <ClCompile Include="Buzz-PatternXP\tree\CreateCheckboxImageList.cpp" />
+    <ClCompile Include="Buzz-PatternXP\tree\VisualStylesXP.cpp" />
+    <ClCompile Include="Buzz-PatternXP\tree\XHtmlTree.cpp" />
+    <ClCompile Include="EditorWnd.cpp" />
+    <ClCompile Include="MinMaxLimiter.cpp" />
+    <ClCompile Include="ReBuzzPatternXPMod.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Buzz-PatternXP\ActionStack.h" />
+    <ClInclude Include="Buzz-PatternXP\App.h" />
+    <ClInclude Include="Buzz-PatternXP\ChordExpert.h" />
+    <ClInclude Include="Buzz-PatternXP\ChordsProgression.h" />
+    <ClInclude Include="Buzz-PatternXP\ColumnDialog.h" />
+    <ClInclude Include="Buzz-PatternXP\CursorPos.h" />
+    <ClInclude Include="Buzz-PatternXP\EditorWnd.h" />
+    <ClInclude Include="Buzz-PatternXP\EmptyWnd.h" />
+    <ClInclude Include="Buzz-PatternXP\FuBar.h" />
+    <ClInclude Include="Buzz-PatternXP\ImageList.h" />
+    <ClInclude Include="Buzz-PatternXP\INI.h" />
+    <ClInclude Include="Buzz-PatternXP\MachinePattern.h" />
+    <ClInclude Include="Buzz-PatternXP\Parameters.h" />
+    <ClInclude Include="Buzz-PatternXP\PatEd.h" />
+    <ClInclude Include="Buzz-PatternXP\PatEdClipboard.h" />
+    <ClInclude Include="Buzz-PatternXP\resource.h" />
+    <ClInclude Include="Buzz-PatternXP\RowNumWnd.h" />
+    <ClInclude Include="Buzz-PatternXP\SaveArpeggio.h" />
+    <ClInclude Include="Buzz-PatternXP\ScrollWnd.h" />
+    <ClInclude Include="Buzz-PatternXP\stdafx.h" />
+    <ClInclude Include="Buzz-PatternXP\TonalDlg.h" />
+    <ClInclude Include="Buzz-PatternXP\ToolBar2.h" />
+    <ClInclude Include="Buzz-PatternXP\TopWnd.h" />
+    <ClInclude Include="MinMaxLimiter.h" />
+    <ClInclude Include="ReBuzzPatternXPMod.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NativeMachineFramework\NativeMachineFramework.vcxproj">
+      <Project>{b1d5248c-b2b6-49fe-b1e7-f77b93fa3531}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.Common\BuzzGUI.Common.csproj">
+      <Project>{dab6d874-8227-415e-8f3c-47adee50a038}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.Interfaces\BuzzGUI.Interfaces.csproj">
+      <Project>{3c40f365-4754-4525-8b1f-3807983ceea7}</Project>
+    </ProjectReference>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Buzz-PatternXP\PatternXP.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Buzz-PatternXP\toolbar1.bmp" />
+    <Image Include="Buzz-PatternXP\toolbar24.bmp" />
+    <Image Include="Buzz-PatternXP\treeimages.bmp" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{F44180F7-7D03-46C2-B8F6-8077855D4F7E}</ProjectGuid>
+    <Keyword>ManagedCProj</Keyword>
+    <RootNamespace>ReBuzzPatternXPMod</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <TargetFramework>net8.0</TargetFramework>
+    <WindowsTargetPlatformMinVersion>7.0</WindowsTargetPlatformMinVersion>
+    <ManagedAssembly>true</ManagedAssembly>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CLRSupport>NetCore</CLRSupport>
+    <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CLRSupport>NetCore</CLRSupport>
+    <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CLRSupport>NetCore</CLRSupport>
+    <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CLRSupport>NetCore</CLRSupport>
+    <CharacterSet>MultiByte</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\net8.0-windows\Gear\Generators\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
+    <ManagedAssembly>true</ManagedAssembly>
+    <TargetName>$(ProjectName).NET</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\net8.0-windows\Gear\Generators\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
+    <ManagedAssembly>true</ManagedAssembly>
+    <TargetName>$(ProjectName).NET</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\net8.0-windows\Gear\Generators\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
+    <ManagedAssembly>true</ManagedAssembly>
+    <TargetName>$(ProjectName).NET</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\net8.0-windows\Gear\Generators\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
+    <ManagedAssembly>true</ManagedAssembly>
+    <TargetName>$(ProjectName).NET</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>_DEBUG;_USRDLL;BWC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Buzz-PatternXP\tree;$(ProjectDir)Buzz-PatternXP;$(ProjectDir)..\NativeMachineFramework;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4642</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)Buzz-PatternXP\tree;$(ProjectDir)Buzz-PatternXP;$(ProjectDir)..\NativeMachineFramework;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4642</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)Buzz-PatternXP\tree;$(ProjectDir)Buzz-PatternXP;$(ProjectDir)..\NativeMachineFramework;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4642</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>NDEBUG;_USRDLL;BWC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Buzz-PatternXP\tree;$(ProjectDir)Buzz-PatternXP;$(ProjectDir)..\NativeMachineFramework;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4642</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies />
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
