@@ -22,13 +22,12 @@ namespace ReBuzz
             
             ~NativeMFCMachineControl();
 
+
             virtual void OnHandleCreated(EventArgs^ args) override;
 
             virtual void OnHandleDestroyed(EventArgs^ args) override;
 
             virtual void OnSizeChanged(EventArgs^ args) override;
-
-            //virtual void OnPaint(PaintEventArgs^ args ) override;
 
         private:
             void Destroy();

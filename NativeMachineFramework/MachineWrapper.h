@@ -30,11 +30,14 @@ namespace ReBuzz
 
         typedef OnPatternEditorRedrawCallback OnPatEditorRedrawCallback(void* param);
 
+        typedef void (*OnPatternEditorCreateCallback)(void* param);
+
         public ref class MachineWrapper
         {
         public:
             MachineWrapper( void * machine, IBuzzMachineHost^ host, IBuzzMachine^ buzzmachine,
                             void * callbackparam,
+                            OnPatternEditorCreateCallback editorCreateCallback,
                             KeyboardFocusWindowHandleCallback kbcallback,
                             OnPatternEditorRedrawCallback redrawcallback);
 
@@ -155,6 +158,7 @@ namespace ReBuzz
             System::Action<int>^ m_seqRemovedAction;
             UserControl^ m_control;
 
+            OnPatternEditorCreateCallback m_editorCreateCallback;
             KeyboardFocusWindowHandleCallback m_kbFocusWndcallback;
             void* m_kbFocusCallbackParam;
             KeyEventHandler^ m_onKeyDownHandler;

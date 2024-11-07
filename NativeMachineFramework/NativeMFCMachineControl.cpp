@@ -1,5 +1,6 @@
 #include "NativeMFCMachineControl.h"
 
+
 using namespace System::Windows::Forms;
 
 namespace ReBuzz
@@ -52,16 +53,8 @@ namespace ReBuzz
             }
         }
 
-       
+        
 
-        /*void NativeMFCMachineControl::OnPaint(PaintEventArgs^ args)
-        {
-            UserControl::OnPaint(args);
-
-            //Get the HDC
-            //IntPtr hdc = args->Graphics->GetHdc();
-
-            
-        }*/
+      
     }
 }

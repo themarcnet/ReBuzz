@@ -50,6 +50,7 @@
     <PlatformToolset>v143</PlatformToolset>
     <CLRSupport>NetCore</CLRSupport>
     <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -57,6 +58,7 @@
     <PlatformToolset>v143</PlatformToolset>
     <CLRSupport>NetCore</CLRSupport>
     <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -104,6 +106,7 @@
       <PreprocessorDefinitions>_DEBUG;_USRDLL;_BUILD_NATIVEFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>Buzz</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4642</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>User32.lib</AdditionalDependencies>
@@ -140,6 +143,7 @@
       <PreprocessorDefinitions>NDEBUG;_USRDLL;_BUILD_NATIVEFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>Buzz</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4642</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <AdditionalDependencies>User32.lib</AdditionalDependencies>
@@ -161,6 +165,10 @@
     <ClCompile Include="NativeMFCMachineControl.cpp" />
     <ClCompile Include="PatternManager.cpp" />
     <ClCompile Include="Utils.cpp" />
+    <ClCompile Include="WindowUtils.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BuzzDataTypes.h" />
@@ -175,6 +183,7 @@
     <ClInclude Include="RebuzzBuzzLookup.h" />
     <ClInclude Include="RefClassWrapper.h" />
     <ClInclude Include="Utils.h" />
+    <ClInclude Include="WindowUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.Common\BuzzGUI.Common.csproj">

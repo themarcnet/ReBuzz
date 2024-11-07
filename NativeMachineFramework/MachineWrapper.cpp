@@ -66,6 +66,7 @@ namespace ReBuzz
                                        IBuzzMachineHost^ host,
                                        IBuzzMachine^ buzzmachine,
                                         void* callbackparam,
+                                        OnPatternEditorCreateCallback editorCreateCallback,
                                         KeyboardFocusWindowHandleCallback kbcallback,
                                         OnPatternEditorRedrawCallback redrawcallback) : 
                                                                      m_thisref(new RefClassWrapper<MachineWrapper>(this)),
@@ -78,6 +79,7 @@ namespace ReBuzz
                                                                      m_patternEditorPattern(NULL),
                                                                      m_patternEditorMachine(NULL),
                                                                      m_control(nullptr),
+                                                                     m_editorCreateCallback(editorCreateCallback),
                                                                      m_kbFocusWndcallback(kbcallback),
                                                                      m_kbFocusCallbackParam(callbackparam),
                                                                      m_onKeyDownHandler(nullptr),
@@ -297,6 +299,10 @@ namespace ReBuzz
 
             classRef->GetRef()->m_onKeyupHandler = gcnew KeyEventHandler(classRef->GetRef(), &MachineWrapper::OnKeyUp);
             classRef->GetRef()->m_control->KeyUp += classRef->GetRef()->m_onKeyupHandler;
+
+            //Tell the caller that the control has now been created and set up
+            if(classRef->GetRef()->m_editorCreateCallback != NULL)
+                classRef->GetRef()->m_editorCreateCallback(classRef->GetRef()->m_kbFocusCallbackParam);
 
             return IntPtr(patternEditorHwnd);
         }
