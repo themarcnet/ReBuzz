@@ -42,9 +42,6 @@
     <ClCompile Include="Buzz-PatternXP\tree\XHtmlTree.cpp">
       <Filter>Source Files\Tree</Filter>
     </ClCompile>
-    <ClCompile Include="Buzz-PatternXP\EditorWnd.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Buzz-PatternXP\EmptyWnd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -66,8 +63,32 @@
     <ClCompile Include="Buzz-PatternXP\XMemDC.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ReBuzzPatternXPMod.cpp">
+    <ClCompile Include="Buzz-PatternXP\ChordExpert.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Buzz-PatternXP\ChordsProgression.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorWnd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Buzz-PatternXP\INI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MinMaxLimiter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Buzz-PatternXP\Parameters.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Buzz-PatternXP\SaveArpeggio.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Buzz-PatternXP\TonalDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ReBuzzPatternXPMod.cpp">
+      <Filter>Source Files\ReBuzz</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -125,11 +146,27 @@
     <ClInclude Include="ReBuzzPatternXPMod.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="PatternXPRE\patternxp\PatternXP.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
+    <ClInclude Include="Buzz-PatternXP\ChordExpert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Buzz-PatternXP\ChordsProgression.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Buzz-PatternXP\INI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MinMaxLimiter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Buzz-PatternXP\Parameters.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Buzz-PatternXP\SaveArpeggio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Buzz-PatternXP\TonalDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Buzz-PatternXP\toolbar1.bmp">
@@ -141,5 +178,10 @@
     <Image Include="Buzz-PatternXP\toolbar24.bmp">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Buzz-PatternXP\PatternXP.rc">
+      <Filter>Source Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

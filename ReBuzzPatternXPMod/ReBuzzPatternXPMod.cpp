@@ -9,11 +9,14 @@
 #include <RefClassWrapper.h>
 #include <NativeMachineReader.h>
 #include <NativeMachineWriter.h>
+#include <WindowUtils.h>
 #include <Utils.h>
 
 #include "ReBuzzPatternXPMod.h"
 #include <memory>
 #include "stdafx.h"
+
+
 
 
 using namespace ReBuzz::NativeMachineFramework;
@@ -35,7 +38,169 @@ struct ReBuzzPatternXpCallbackData
     mi* machine;
 };
 
+static BOOL CALLBACK GetControlPositionCallback(HWND hwnd, LPARAM lparam)
+{
+    std::map<HWND, RECT>* controlPos = reinterpret_cast<std::map<HWND, RECT>*>(lparam);
+    RECT rt;
+    GetWindowRect(hwnd, &rt);
+    MapWindowPoints(HWND_DESKTOP, GetParent(hwnd), (LPPOINT)&rt, 2);
+    (*controlPos)[hwnd] = rt;
+    return TRUE;
+}
+
 //Callbacks
+static void OnWindowCreatedCallback(void * param)
+{
+    ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(param);
+    mi* pmi = reinterpret_cast<mi*>(callbackData->machineInterface);
+    
+    double vScalingFactor = WindowUtils::GetScalingFactor(pmi->patEd->toolBar);
+    if (vScalingFactor <= 1.0)
+        return; //No scaling required
+
+    //Get original toolbar control positions
+    std::map<HWND, RECT> toolbarControlOriginalPositions;
+    EnumChildWindows( pmi->patEd->toolBar.m_hWnd, GetControlPositionCallback, reinterpret_cast<LPARAM>(&toolbarControlOriginalPositions));
+    EnumChildWindows(pmi->patEd->toolBarExt.m_hWnd, GetControlPositionCallback, reinterpret_cast<LPARAM>(&toolbarControlOriginalPositions));
+
+    //Resize icons for current DPI
+    WindowUtils::ResizeImageListForCurrentDPI(&pmi->patEd->toolBar);
+    WindowUtils::ResizeImageListForCurrentDPI(&pmi->patEd->toolBarExt);
+
+    double hScalingFactor = WindowUtils::GetToolbarScalingFactor(pmi->patEd->toolBar);
+    WindowUtils::RepositionAndResizeChildControls(pmi->patEd->m_hWnd, vScalingFactor);
+
+    //The controls on the toolbar will no longer fit correctly, so we need to manually reposition the 
+    //toolbar controls
+
+    int barXPos = 68 * hScalingFactor;
+    int barLabelWidth = (hScalingFactor / 1.4) * (toolbarControlOriginalPositions[pmi->patEd->toolBar.labelBar.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBar.labelBar.m_hWnd].left);
+    MoveWindow(pmi->patEd->toolBar.labelBar.m_hWnd,
+        barXPos,
+        toolbarControlOriginalPositions[pmi->patEd->toolBar.labelBar.m_hWnd].top * vScalingFactor,
+        barLabelWidth,
+        vScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.labelBar.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBar.labelBar.m_hWnd].top),
+        TRUE);
+
+    MoveWindow(pmi->patEd->toolBar.comboBar.m_hWnd,
+        barXPos + barLabelWidth,
+        toolbarControlOriginalPositions[pmi->patEd->toolBar.comboBar.m_hWnd].top * vScalingFactor,
+        (hScalingFactor / 1.66) * (toolbarControlOriginalPositions[pmi->patEd->toolBar.comboBar.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBar.comboBar.m_hWnd].left),
+        vScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.comboBar.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBar.comboBar.m_hWnd].top),
+        TRUE);
+
+    
+    MoveWindow(pmi->patEd->toolBar.comboShrink.m_hWnd,
+        464 * hScalingFactor,
+        toolbarControlOriginalPositions[pmi->patEd->toolBar.comboShrink.m_hWnd].top * vScalingFactor,
+        (hScalingFactor / 1.6) * (toolbarControlOriginalPositions[pmi->patEd->toolBar.comboShrink.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBar.comboShrink.m_hWnd].left),
+        vScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.comboShrink.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBar.comboShrink.m_hWnd].top),
+        TRUE);
+
+    int editHumanizeX = 520 * hScalingFactor;
+    int editHumanizeWidth = (hScalingFactor / 1.56) * (toolbarControlOriginalPositions[pmi->patEd->toolBar.editHumanize.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBar.editHumanize.m_hWnd].left);
+    MoveWindow(pmi->patEd->toolBar.editHumanize.m_hWnd,
+        editHumanizeX,
+        toolbarControlOriginalPositions[pmi->patEd->toolBar.editHumanize.m_hWnd].top * vScalingFactor,
+        editHumanizeWidth,
+        vScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.editHumanize.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBar.editHumanize.m_hWnd].top),
+        TRUE);
+
+    MoveWindow(pmi->patEd->toolBar.checkHumanizeEmpty.m_hWnd,
+        editHumanizeX + editHumanizeWidth,
+        toolbarControlOriginalPositions[pmi->patEd->toolBar.checkHumanizeEmpty.m_hWnd].top * vScalingFactor,
+        (hScalingFactor / 2.2) * (toolbarControlOriginalPositions[pmi->patEd->toolBar.checkHumanizeEmpty.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBar.checkHumanizeEmpty.m_hWnd].left),
+        vScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.checkHumanizeEmpty.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBar.checkHumanizeEmpty.m_hWnd].top),
+        TRUE);
+
+    SetWindowText(pmi->patEd->toolBar.checkHumanizeEmpty, "+empty");
+    CFont smallerFont;
+    smallerFont.CreatePointFont(60, "MS Shell Dlg");
+    SendMessage(pmi->patEd->toolBar.checkHumanizeEmpty.m_hWnd, WM_SETFONT, (WPARAM)HFONT(smallerFont), TRUE);
+
+
+   
+
+    int interpolateX = 578 * hScalingFactor;
+    int interpolateWidth = hScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.comboInterpolate.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBar.comboInterpolate.m_hWnd].left);
+    MoveWindow(pmi->patEd->toolBar.comboInterpolate.m_hWnd,
+         interpolateX,
+         toolbarControlOriginalPositions[pmi->patEd->toolBar.comboInterpolate.m_hWnd].top * vScalingFactor,
+         interpolateWidth, 
+         vScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.comboInterpolate.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBar.comboInterpolate.m_hWnd].top),
+         TRUE);
+
+    int checkMidiWidth = hScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.checkMidi.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBar.checkMidi.m_hWnd].left);
+     MoveWindow(pmi->patEd->toolBar.checkMidi.m_hWnd,
+         interpolateX + interpolateWidth,
+         toolbarControlOriginalPositions[pmi->patEd->toolBar.checkMidi.m_hWnd].top * vScalingFactor,
+         checkMidiWidth,
+         vScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.checkMidi.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBar.checkMidi.m_hWnd].top),
+         TRUE);
+
+     int checkHelpWidth = hScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.checkHelp.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBar.checkHelp.m_hWnd].left);
+     MoveWindow(pmi->patEd->toolBar.checkHelp.m_hWnd,
+         checkMidiWidth + interpolateX + interpolateWidth,
+         toolbarControlOriginalPositions[pmi->patEd->toolBar.checkHelp.m_hWnd].top * vScalingFactor,
+         checkHelpWidth,
+         vScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.checkHelp.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBar.checkHelp.m_hWnd].top),
+         TRUE);
+
+
+     MoveWindow(pmi->patEd->toolBar.checkToolbar.m_hWnd,
+         checkMidiWidth + interpolateX + interpolateWidth + checkHelpWidth,
+         toolbarControlOriginalPositions[pmi->patEd->toolBar.checkToolbar.m_hWnd].top * vScalingFactor,
+         hScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.checkToolbar.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBar.checkToolbar.m_hWnd].left),
+         vScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBar.checkToolbar.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBar.checkToolbar.m_hWnd].top),
+         TRUE);
+
+
+     //toolBarExt
+     MoveWindow(pmi->patEd->toolBarExt.comboChords.m_hWnd,
+                hScalingFactor * 46,
+                vScalingFactor * toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboChords.m_hWnd].top,
+                (hScalingFactor / 2.45) * (toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboChords.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboChords.m_hWnd].left),
+                 vScalingFactor * (toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboChords.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboChords.m_hWnd].top),
+                 TRUE);
+
+     int checkChordsX = hScalingFactor * 90;
+     int checkChordsWidth = (hScalingFactor / 2) * (toolbarControlOriginalPositions[pmi->patEd->toolBarExt.checkChordsOnce.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBarExt.checkChordsOnce.m_hWnd].left);
+     MoveWindow(pmi->patEd->toolBarExt.checkChordsOnce.m_hWnd,
+         checkChordsX,
+         vScalingFactor* toolbarControlOriginalPositions[pmi->patEd->toolBarExt.checkChordsOnce.m_hWnd].top,
+         checkChordsWidth,
+         vScalingFactor* (toolbarControlOriginalPositions[pmi->patEd->toolBarExt.checkChordsOnce.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBarExt.checkChordsOnce.m_hWnd].top),
+         TRUE);
+     SendMessage(pmi->patEd->toolBarExt.checkChordsOnce.m_hWnd, WM_SETFONT, (WPARAM)HFONT(smallerFont), TRUE);
+    
+
+     MoveWindow(pmi->patEd->toolBarExt.comboArpeggio.m_hWnd,
+         checkChordsX + checkChordsWidth,
+         vScalingFactor* toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboArpeggio.m_hWnd].top,
+         (hScalingFactor / 3.4)* (toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboArpeggio.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboArpeggio.m_hWnd].left),
+         vScalingFactor* (toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboArpeggio.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboArpeggio.m_hWnd].top),
+         TRUE);
+
+     MoveWindow(pmi->patEd->toolBarExt.comboTonal.m_hWnd,
+         194 * hScalingFactor,
+         vScalingFactor* toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboTonal.m_hWnd].top,
+         (hScalingFactor / 2.5)* (toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboTonal.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboTonal.m_hWnd].left),
+         vScalingFactor* (toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboTonal.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboTonal.m_hWnd].top),
+         TRUE);
+
+     MoveWindow(pmi->patEd->toolBarExt.comboTranspose.m_hWnd,
+         270 * hScalingFactor,
+         vScalingFactor* toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboTranspose.m_hWnd].top,
+         (hScalingFactor / 2)* (toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboTranspose.m_hWnd].right - toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboTranspose.m_hWnd].left),
+         vScalingFactor* (toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboTranspose.m_hWnd].bottom - toolbarControlOriginalPositions[pmi->patEd->toolBarExt.comboTranspose.m_hWnd].top),
+         TRUE);
+
+     SetWindowLong( pmi->patEd->toolBarExt.labelTonal.m_hWnd, GWL_STYLE, 
+                    GetWindowLong(pmi->patEd->toolBarExt.labelTonal.m_hWnd, GWL_STYLE) & (~WS_VISIBLE));
+
+
+
+}
 
 static void * GetKeyboardFocusWindow(void* param)
 {
@@ -72,6 +237,7 @@ ReBuzzPatternXpMachine::ReBuzzPatternXpMachine(IBuzzMachineHost^ host) : m_host(
 
     //Create machine wrapper
     m_machineWrapper = gcnew MachineWrapper(m_interface, host, (IBuzzMachine^)this, cbdata, 
+                                            OnWindowCreatedCallback,
                                             GetKeyboardFocusWindow, 
                                             RedrawEditorWindow);
 

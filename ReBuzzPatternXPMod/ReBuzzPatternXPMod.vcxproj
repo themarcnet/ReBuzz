@@ -87,12 +87,12 @@
     <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Buzz-PatternXP\PatternXP.rc" />
-  </ItemGroup>
-  <ItemGroup>
     <Image Include="Buzz-PatternXP\toolbar1.bmp" />
     <Image Include="Buzz-PatternXP\toolbar24.bmp" />
     <Image Include="Buzz-PatternXP\treeimages.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Buzz-PatternXP\PatternXP.rc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

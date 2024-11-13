@@ -29,6 +29,22 @@ namespace ReBuzz
             char classname[256];
             GetClassNameA(parent, classname, 255);
            
+            RECT parentRect;
+            GetWindowRect(parent, &parentRect);
+
+            PROCESS_DPI_AWARENESS dpi = (PROCESS_DPI_AWARENESS)-1000;
+            GetProcessDpiAwareness(GetCurrentProcess(), &dpi);
+
+            UINT parentDpi = GetDpiForWindow(parent);
+            UINT dpiX, dpiY;
+            HMONITOR hMonitor = MonitorFromWindow(parent, MONITOR_DEFAULTTONEAREST);
+            HRESULT hr = GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
+
+            DWORD style = GetWindowLong(parent, GWL_STYLE);
+            DWORD exstyle = GetWindowLong(parent, GWL_EXSTYLE);
+            AdjustWindowRectExForDpi(&parentRect, style, FALSE, exstyle, dpiY);
+
+            
             //Get child windows and reposition and resize them
             std::vector<HWND> wndList;
             EnumChildWindows(parent, GetChildwindowsCallback, reinterpret_cast<LPARAM>(&wndList));
@@ -36,16 +52,39 @@ namespace ReBuzz
             {
                 RECT controlRect;
                 GetWindowRect(hwnd, &controlRect);
+                //GetClientRect(hwnd, &controlRect);
+                GetClassNameA(hwnd, classname, 255);
+                MapWindowPoints(HWND_DESKTOP, parent, (LPPOINT)&controlRect, 2);
 
-                POINT points[2];
-                points[0].x = controlRect.left;
-                points[0].y = controlRect.top;
-                points[1].x = controlRect.right;
-                points[1].y = controlRect.bottom;
 
-                MapWindowPoints(HWND_DESKTOP, parent, &points[0], 2);
+                //int newX = controlRect.left - parentRect.left;
+                int newX = controlRect.left;
+                newX *= scalingFactor;
+                //int newY = controlRect.top - parentRect.top;
+                int newY = controlRect.top;
+                int newWidth = controlRect.right - controlRect.left;
+                newWidth *= scalingFactor;
+                int newHeight = controlRect.bottom - controlRect.top;
 
-                SetWindowPos(hwnd, NULL, points[0].x * scalingFactor, points[0].y * scalingFactor, (points[1].x - points[0].x) * scalingFactor, (points[1].y - points[0].y) * scalingFactor, SWP_NOZORDER);
+                style = GetWindowLong(hwnd, GWL_STYLE);
+                exstyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+                bool ischild = (style & WS_CHILD);
+
+                RECT newRect;
+                newRect.left = newX;
+                newRect.top = newY;
+                newRect.right = newX + newWidth;
+                newRect.bottom = newY + newHeight;
+                AdjustWindowRectExForDpi(&newRect, style, FALSE, exstyle, dpiY);
+
+                if (ischild)
+                {
+                    //SetWindowPos(hwnd, NULL, newX, newY, newWidth, newHeight, SWP_NOZORDER);
+                    MoveWindow(hwnd, newRect.left, newRect.top, newRect.right - newRect.left, newRect.bottom - newRect.top, FALSE);
+                }
+                
+                
+                //MoveWindow(hwnd, newX, newY, newWidth, newHeight, TRUE);
             }
 
         }
@@ -63,6 +102,11 @@ namespace ReBuzz
                 return 1.0f;
 
             return scalingFactor;
+        }
+
+        __declspec(dllexport) double WindowUtils::GetToolbarScalingFactor(HWND hwnd)
+        {
+            return GetScalingFactor(hwnd) * 1.5;
         }
 
         __declspec(dllexport) void WindowUtils::ResizeImageListForCurrentDPI(void * toolbarPtr)
@@ -155,8 +199,8 @@ namespace ReBuzz
                 
                 //Scale mask
                 BITMAPINFO dibScaledInfo = { 0 };
-                dibScaledInfo.bmiHeader.biWidth =  scalingFactor * imgWidth;
-                dibScaledInfo.bmiHeader.biHeight =  scalingFactor * imgHeight;
+                dibScaledInfo.bmiHeader.biWidth = scalingFactor * (info.rcImage.right - info.rcImage.left);
+                dibScaledInfo.bmiHeader.biHeight = scalingFactor * (info.rcImage.bottom - info.rcImage.top);
                 dibScaledInfo.bmiHeader.biBitCount = 32;
                 dibScaledInfo.bmiHeader.biPlanes = 1;
                 dibScaledInfo.bmiHeader.biCompression = BI_RGB;
@@ -231,10 +275,9 @@ namespace ReBuzz
             }
 
             //Increase the button sizes
-            SendMessage(toolbar->m_hWnd, TB_SETBUTTONSIZE, 0, MAKELPARAM( LOWORD(btnSize) * scalingFactor, HIWORD(btnSize) * scalingFactor ) );
-            
-            //Reposition and resize toolbar child controls
-            RepositionAndResizeChildControls(toolbar->m_hWnd, scalingFactor);
+            int btnWidth = LOWORD(btnSize) * GetToolbarScalingFactor(toolbar->m_hWnd);
+            int btnHeight = HIWORD(btnSize) * scalingFactor;
+            SendMessage(toolbar->m_hWnd, TB_SETBUTTONSIZE, 0, MAKELPARAM(btnWidth, btnHeight) );
         }
     }
 }

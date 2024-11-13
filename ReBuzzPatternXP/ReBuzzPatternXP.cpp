@@ -72,6 +72,7 @@ ReBuzzPatternXpMachine::ReBuzzPatternXpMachine(IBuzzMachineHost^ host) : m_host(
 
     //Create machine wrapper
     m_machineWrapper = gcnew MachineWrapper(m_interface, host, (IBuzzMachine^)this, cbdata, 
+                                            NULL,
                                             GetKeyboardFocusWindow, 
                                             RedrawEditorWindow);
 
