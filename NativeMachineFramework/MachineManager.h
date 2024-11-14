@@ -11,7 +11,7 @@ namespace ReBuzz
 {
     namespace NativeMachineFramework
     {
-        public ref class MachineManager
+        public ref class MachineManager : System::IDisposable
         {
         public:
             MachineManager();

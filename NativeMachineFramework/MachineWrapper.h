@@ -32,7 +32,7 @@ namespace ReBuzz
 
         typedef void (*OnPatternEditorCreateCallback)(void* param);
 
-        public ref class MachineWrapper
+        public ref class MachineWrapper : System::IDisposable
         {
         public:
             MachineWrapper( void * machine, IBuzzMachineHost^ host, IBuzzMachine^ buzzmachine,
@@ -41,6 +41,7 @@ namespace ReBuzz
                             KeyboardFocusWindowHandleCallback kbcallback,
                             OnPatternEditorRedrawCallback redrawcallback);
 
+            //Destructor - called when Dispose() is called (and we need to be IDisposable)
             ~MachineWrapper();
 
             void Init();

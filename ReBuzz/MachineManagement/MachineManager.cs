@@ -578,16 +578,6 @@ namespace ReBuzz.MachineManagement
                     var machineHost = managedMachines[machine];
                     machineHost.Release();
                     managedMachines.Remove(machine);
-
-                    if (workInstances.ContainsKey(machine))
-                    {
-                        workInstances.TryRemove(machine, out var dummy);
-                    }
-
-                    if (machine is IDisposable)
-                    {
-                        (machine as IDisposable).Dispose();
-                    }
                 }
 
                 if (workInstances.ContainsKey(machine))

@@ -718,6 +718,14 @@ namespace ReBuzz.ManagedMachine
                 ReleaseFunction();
             }
 
+            //For CLR machines, or machines that are Disposable, 
+            //the Dispose() method must be called to properlly free up resources
+            //used by that machine
+            if(machine is IDisposable)
+            {
+                (machine as IDisposable).Dispose();
+            }
+
             machine = null;
             dll = null;
         }

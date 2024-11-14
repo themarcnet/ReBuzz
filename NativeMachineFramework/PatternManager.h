@@ -20,7 +20,7 @@ namespace ReBuzz
 
         typedef void(*OnPatternEditorRedrawCallback)(void * param);
      
-        public ref class PatternManager
+        public ref class PatternManager : System::IDisposable
         {
         public:
             PatternManager(OnNewPatternCallback onNewPatternCallback, 

@@ -11,7 +11,7 @@ namespace ReBuzz
     namespace NativeMachineFramework
     {
 
-        public ref class MachineEventWrapper
+        public ref class MachineEventWrapper : System::IDisposable
         {
         public:
             MachineEventWrapper(IMachine^ self, CMachineInterface* machineIface);

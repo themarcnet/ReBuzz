@@ -12,7 +12,7 @@ namespace ReBuzz
         public delegate void DetatchCallback(IntPtr hwnd, void* param);
         public delegate void SizeChangedCallback(IntPtr hwnd, void* param, int left, int top, int width, int height);
 
-        public ref class NativeMFCMachineControl  : public  UserControl
+        public ref class NativeMFCMachineControl  : public  UserControl, System::IDisposable
         {
         public:
             NativeMFCMachineControl(AttachCallback^ onAttach, 

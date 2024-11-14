@@ -28,16 +28,16 @@ using ReBuzz::NativeMachineFramework::MachineWrapper;
 
 
 [MachineDecl(Name = "Jeskola Pattern XP mod", ShortName = "Pattern XP mod", Author = "WDE / chahur / MarCNeT", MaxTracks = 8, InputCount = 0, OutputCount = 0)]
-public ref class ReBuzzPatternXpMachine : IBuzzMachine, INotifyPropertyChanged
+public ref class ReBuzzPatternXpMachine : IBuzzMachine, INotifyPropertyChanged, System::IDisposable
 {
 public:
 
     //Constructor
     ReBuzzPatternXpMachine(IBuzzMachineHost^ host);
 
-    //Destructor
+    //Destructor - called when machine is disposed
     ~ReBuzzPatternXpMachine();
-
+    
     void Work();
 
     void ImportFinished(IDictionary<String^, String^>^ machineNameMap);
