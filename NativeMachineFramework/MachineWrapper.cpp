@@ -114,42 +114,12 @@ namespace ReBuzz
 
         MachineWrapper::~MachineWrapper()
         {
-            Global::Buzz->Song->SequenceAdded -= m_seqAddedAction;
-            Global::Buzz->Song->SequenceRemoved -= m_seqRemovedAction;
-
-            
-            delete m_seqAddedAction;
-            delete m_seqRemovedAction;
-
-            if (m_control != nullptr)
-            {
-                if (m_onKeyDownHandler != nullptr)
-                {
-                    m_control->KeyDown -= this->m_onKeyDownHandler;
-                    delete m_onKeyDownHandler;
-                    m_onKeyDownHandler = nullptr;
-                }
-
-                if (m_onKeyupHandler != nullptr)
-                {
-                    m_control->KeyUp -= this->m_onKeyupHandler;
-                    delete m_onKeyupHandler;
-                    m_onKeyupHandler = nullptr;
-                }
-            }
+            Release();
 
             m_machine->pCB = NULL; //Callbacks no longer available...
             delete m_callbackWrapper;
             delete m_waveLevelsMap;
             delete m_sequenceMap;
-
-
-            //Delete machine manager
-            delete m_machineMgr;
-
-            //Delete pattern manager
-            delete m_patternMgr;
-
             delete m_masterInfo;
         }
 
@@ -186,6 +156,61 @@ namespace ReBuzz
                 m_initialised = true;
             }
         }
+
+        void MachineWrapper::Release()
+        {
+            if (m_hwndEditor != NULL)
+            {
+                CloseWindow(m_hwndEditor);
+                DestroyWindow(m_hwndEditor);
+            }
+
+            if (m_callbackWrapper != NULL)
+            {
+                m_callbackWrapper->Release();
+            }
+
+            Global::Buzz->Song->SequenceAdded -= m_seqAddedAction;
+            Global::Buzz->Song->SequenceRemoved -= m_seqRemovedAction;
+            delete m_seqAddedAction;
+            delete m_seqRemovedAction;
+
+            if (m_control != nullptr)
+            {
+                if (m_onKeyDownHandler != nullptr)
+                {
+                    m_control->KeyDown -= this->m_onKeyDownHandler;
+                    delete m_onKeyDownHandler;
+                    m_onKeyDownHandler = nullptr;
+                }
+
+                if (m_onKeyupHandler != nullptr)
+                {
+                    m_control->KeyUp -= this->m_onKeyupHandler;
+                    delete m_onKeyupHandler;
+                    m_onKeyupHandler = nullptr;
+                }
+
+                delete m_control;
+                m_control = nullptr;
+            }
+
+            //Remove all machines from the machine manager
+            if (m_machineMgr != nullptr)
+            {
+                m_machineMgr->Release();
+                delete m_machineMgr; 
+                m_machineMgr = nullptr;
+            }
+            
+            if (m_patternMgr != nullptr)
+            {
+                m_patternMgr->Release();
+                delete m_patternMgr;
+                m_patternMgr = nullptr;
+            }
+        }
+
 
         CMachineInterfaceEx* MachineWrapper::GetExInterface()
         {
@@ -559,6 +584,10 @@ namespace ReBuzz
 
         cli::array<byte>^ MachineWrapper::Save()
         {
+            if (!m_initialised ||   (m_machine == NULL))
+                return nullptr;
+            
+
             //Save data 
             NativeMachineWriter output;
             m_machine->Save(&output);
@@ -630,15 +659,7 @@ namespace ReBuzz
             }
         }
 
-        void MachineWrapper::Release()
-        {
-            if (m_hwndEditor != NULL)
-            {
-                CloseWindow(m_hwndEditor);
-                DestroyWindow(m_hwndEditor);
-            }
-        }
-
+        
         void MachineWrapper::CreatePatternCopy(IPattern^ pnew, IPattern^ p)
         {
             //Get old pattern

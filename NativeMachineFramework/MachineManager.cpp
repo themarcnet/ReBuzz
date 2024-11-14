@@ -261,7 +261,7 @@ namespace ReBuzz
                 machdata->m_info.Parameters = machdata->parameterPtrs.data();
 
             //Store the internal id against the machine name
-            uint64_t id = rebuzzMach->CMachinePtr.ToInt64();
+            int64_t id = Utils::ObjectToInt64(rebuzzMach);
             machCallbackData->machineNameMap[machdata->name] = id;
         }
 
@@ -274,7 +274,6 @@ namespace ReBuzz
             m_machineCallbackData = machCallbackData;
             m_machineMap = new RebuzzBuzzLookup< IMachine, CMachineData, CMachine>(CreateMachineCallback, m_machineCallbackData);
             
-
             //Set up callback data
             machCallbackData->machineMap = m_machineMap;
 
@@ -289,17 +288,47 @@ namespace ReBuzz
 
         MachineManager::~MachineManager()
         {
-            //Unregister events
-            Global::Buzz->Song->MachineAdded -= m_machineAddedAction;
-            Global::Buzz->Song->MachineRemoved -= m_machineRemovedAction;
-            delete m_machineAddedAction;
-            delete m_machineRemovedAction;
+            Release();
 
+            
             MachineCreateCallbackData* machCallbackData = reinterpret_cast<MachineCreateCallbackData*>(m_machineCallbackData);
             delete machCallbackData;
 
-            delete m_machineMap;
-            delete m_lock;
+            if (m_lock != NULL)
+            {
+                delete m_lock;
+                m_lock = NULL;
+            }
+        }
+
+        void MachineManager::Release()
+        {
+            if (m_lock == NULL)
+                return;
+
+            std::lock_guard<std::mutex> lg(*m_lock);
+
+            //Unregister events
+            if (m_machineAddedAction != nullptr)
+            {
+                Global::Buzz->Song->MachineAdded -= m_machineAddedAction;
+                delete m_machineAddedAction;
+                m_machineAddedAction = nullptr;
+            }
+
+            if (m_machineRemovedAction != nullptr)
+            {
+                Global::Buzz->Song->MachineRemoved -= m_machineRemovedAction;
+                delete m_machineRemovedAction;
+                m_machineRemovedAction = nullptr;
+            }
+
+            if (m_machineMap != NULL)
+            {
+                m_machineMap->Release();
+                delete m_machineMap;
+                m_machineMap = NULL;
+            }
         }
 
         IMachine^ MachineManager::GetReBuzzMachine(CMachine * mach)
@@ -329,7 +358,7 @@ namespace ReBuzz
 
             std::lock_guard<std::mutex> lg(*m_lock);
 
-            uint64_t machid = m->CMachinePtr.ToInt64();
+            int64_t machid = Utils::ObjectToInt64(m);   
             return m_machineMap->GetOrStoreReBuzzTypeById(machid, m);
         }
 
@@ -353,7 +382,7 @@ namespace ReBuzz
                         if (mach->Name == clrName)
                         {
                             //Found - create entry in our map
-                            uint64_t id = mach->CMachinePtr.ToInt64();
+                            int64_t id = Utils::ObjectToInt64(mach);
                             ret = machCallbackData->machineMap->GetOrStoreReBuzzTypeById(id, mach);
                             machCallbackData->machineNameMap[name] = id;
                             break;
@@ -376,7 +405,7 @@ namespace ReBuzz
             std::lock_guard<std::mutex> lg(*m_lock);
 
             //Do we have this machine in our map?
-            uint64_t id = machine->CMachinePtr.ToInt64();
+            int64_t id = Utils::ObjectToInt64(machine);
             CMachine* pmach = m_machineMap->GetBuzzTypeById(id);
             if (pmach == NULL)
             {

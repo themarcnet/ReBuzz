@@ -14,6 +14,7 @@ using BuzzGUI::Interfaces::IWave;
 using BuzzGUI::Interfaces::IWaveLayer;
 using BuzzGUI::Interfaces::ISequence;
 using BuzzGUI::Interfaces::IParameterGroup;
+using Buzz::MachineInterface::IBuzzMachineHost;
 
 using Buzz::MachineInterface::SubTickInfo;
 
@@ -46,6 +47,12 @@ namespace ReBuzz
 
         MachineCallbackWrapper::~MachineCallbackWrapper()
         {
+            Release();
+            m_netmcahine.Free();
+        }
+
+        void MachineCallbackWrapper::Release()
+        {
             if (!m_addedMachineEventHandler.isNull())
             {
                 MachineEventWrapper^ evtWrapper = m_addedMachineEventHandler.GetRef();
@@ -61,8 +68,6 @@ namespace ReBuzz
                 delete evtWrapper;
                 m_deleteMachineEventHandler.Free();
             }
-
-            m_netmcahine.Free();
         }
 
         int MachineCallbackWrapper::GetHostVersion()
@@ -109,7 +114,7 @@ namespace ReBuzz
                     //Ask ReBuzz to call us back if a machine is added to the song
                     if (m_addedMachineEventHandler.isNull())
                     {
-                        m_addedMachineEventHandler = gcnew MachineEventWrapper(m_interface);
+                        m_addedMachineEventHandler = gcnew MachineEventWrapper(m_machinehost.GetRef()->Machine,m_interface);
 
                         //Tell ReBuzz to call the event handler on event, which will call all the registered callbacks
                         MachineEventWrapper^ eventHandler = m_addedMachineEventHandler.GetRef();
@@ -125,7 +130,7 @@ namespace ReBuzz
                     //Ask ReBuzz to call us back if a machine is added to the song
                     if (m_deleteMachineEventHandler.isNull())
                     {
-                        m_deleteMachineEventHandler = gcnew MachineEventWrapper(m_interface);
+                        m_deleteMachineEventHandler = gcnew MachineEventWrapper(m_machinehost.GetRef()->Machine, m_interface);
 
                         //Tell ReBuzz to call our method on event, which will call all the registered callbacks
                         MachineEventWrapper^ eventHandler = m_deleteMachineEventHandler.GetRef();

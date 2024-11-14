@@ -28,6 +28,8 @@ namespace ReBuzz
                            void* callbackData);
             ~PatternManager();
 
+            void Release();
+
             void SetExInterface(CMachineInterfaceEx* iface);
 
             CPattern* GetPatternByName(IMachine^ rebuzzmac, const char* name);

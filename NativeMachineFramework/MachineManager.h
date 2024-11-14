@@ -18,6 +18,8 @@ namespace ReBuzz
 
             ~MachineManager();
 
+            void Release();
+
             IMachine^ GetReBuzzMachine(CMachine * mach);
 
             CMachineData* GetBuzzMachineData(CMachine* mach);

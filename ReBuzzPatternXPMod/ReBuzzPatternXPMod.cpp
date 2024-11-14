@@ -198,8 +198,6 @@ static void OnWindowCreatedCallback(void * param)
      SetWindowLong( pmi->patEd->toolBarExt.labelTonal.m_hWnd, GWL_STYLE, 
                     GetWindowLong(pmi->patEd->toolBarExt.labelTonal.m_hWnd, GWL_STYLE) & (~WS_VISIBLE));
 
-
-
 }
 
 static void * GetKeyboardFocusWindow(void* param)
@@ -235,6 +233,13 @@ ReBuzzPatternXpMachine::ReBuzzPatternXpMachine(IBuzzMachineHost^ host) : m_host(
     cbdata->machine = pmi;
     m_callbackdata = cbdata;
 
+    //Init some stuff in the PatterXP Mod class, since the class itself seems unable to do this....
+    if (pmi->patEd != NULL)
+    {
+        pmi->patEd->pe.pew = pmi->patEd;
+        pmi->patEd->pe.pCB = NULL;
+    }
+
     //Create machine wrapper
     m_machineWrapper = gcnew MachineWrapper(m_interface, host, (IBuzzMachine^)this, cbdata, 
                                             OnWindowCreatedCallback,
@@ -253,6 +258,21 @@ ReBuzzPatternXpMachine::~ReBuzzPatternXpMachine()
     delete callbackData;
 
     delete m_patternEditor;
+}
+
+void ReBuzzPatternXpMachine::Initialise()
+{
+    if (!m_initialised)
+    {
+        //Initialise the native machine wrapper
+        m_machineWrapper->Init();
+
+        //Check other things have been created
+        if (gChordsProgression == NULL)
+            gChordsProgression = new CChordsProgression();
+
+        m_initialised = true;
+    }
 }
 
 void ReBuzzPatternXpMachine::Work()
@@ -277,12 +297,7 @@ void ReBuzzPatternXpMachine::Work()
 
 void ReBuzzPatternXpMachine::ImportFinished(IDictionary<String^, String^>^ machineNameMap)
 {
-    if (!m_initialised)
-    {
-        //Initialise the native machine wrapper
-        m_machineWrapper->Init();
-        m_initialised = true;
-    }
+    Initialise();
 }
 
 
@@ -290,11 +305,7 @@ void ReBuzzPatternXpMachine::ImportFinished(IDictionary<String^, String^>^ machi
 UserControl^ ReBuzzPatternXpMachine::PatternEditorControl()
 {
     //Make sure we're initialised
-    if (!m_initialised)
-    {
-        m_machineWrapper->Init();
-        m_initialised = true;
-    }
+    Initialise();
 
     if (m_patternEditor != NULL)
     {
@@ -380,6 +391,9 @@ void ReBuzzPatternXpMachine::MidiControlChange(int ctrl, int channel, int value)
 
 cli::array<byte>^ ReBuzzPatternXpMachine::GetPatternEditorData()
 {
+    //Ensure gChordsProgression is set up
+    Initialise();
+
     return m_machineWrapper->Save();
 }
 

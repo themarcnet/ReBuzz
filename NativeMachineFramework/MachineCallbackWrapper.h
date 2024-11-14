@@ -37,6 +37,7 @@ namespace ReBuzz
 
             CMachineInterfaceEx* GetExInterface() const;
 
+            void Release();
             
             //------------------------------------------------------------------------------------
 

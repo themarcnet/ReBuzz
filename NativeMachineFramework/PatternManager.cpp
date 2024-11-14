@@ -36,8 +36,8 @@ namespace ReBuzz
                 if (lock)
                     lg.lock();
 
-                
-                buzzPat = m_patternMap->GetBuzzTypeById(rebuzzpat->GetHashCode());
+                int64_t patid = Utils::ObjectToInt64(rebuzzpat);
+                buzzPat = m_patternMap->GetBuzzTypeById(patid);
                 if (buzzPat == NULL)
                     return;
 
@@ -136,8 +136,9 @@ namespace ReBuzz
             patdata->length = rebuzzPattern->Length;
 
             //Store pattern against name and ReBuzz CMachineDataPtr
-            int64_t machinePtrValue = rebuzzPattern->Machine->CMachinePtr.ToInt64();
-            callbackData->patternNameMap[machinePtrValue][patdata->name] = rebuzzPattern->GetHashCode();
+            int64_t machineId = Utils::ObjectToInt64(rebuzzPattern->Machine);
+            int64_t patId = Utils::ObjectToInt64(rebuzzPattern);
+            callbackData->patternNameMap[machineId][patdata->name] = patId;
 
             //Mark this pattern needs to have the callback called for it
             callbackData->callbacksRequired.push_back(buzzPat);
@@ -190,26 +191,51 @@ namespace ReBuzz
 
         PatternManager::~PatternManager()
         {
+            Release();
+
             PatternCreateCallbackData* patternCallbackData = reinterpret_cast<PatternCreateCallbackData*>(m_patternCallbackData);
+           
+            delete patternCallbackData;
             
+            if (m_lock != NULL)
+            {
+                delete m_lock;
+                m_lock = NULL;
+            }
+        }
+
+        void PatternManager::Release()
+        {
+            if (m_lock == NULL)
+                return;
+
+            std::lock_guard<std::mutex> lg(*m_lock);
+
             //Unreigster the action from all patterns
             if (m_onPatternChangeAction != nullptr)
             {
                 RefClassWrapper<System::Action<IPatternColumn^>> tmpact(m_onPatternChangeAction);
-                m_patternMap->ForEachItem(RemovePatChangeAction, &tmpact);
+                if(m_patternMap != NULL)
+                    m_patternMap->ForEachItem(RemovePatChangeAction, &tmpact);
+                
                 delete m_onPatternChangeAction;
             }
 
             if (m_onPropChangeEventHandler != nullptr)
             {
                 RefClassWrapper<PropertyChangedEventHandler> tmphdlr(m_onPropChangeEventHandler);
-                m_patternMap->ForEachItem(RemovePropChangeHandler, &tmphdlr);
+                if(m_patternMap != NULL)
+                    m_patternMap->ForEachItem(RemovePropChangeHandler, &tmphdlr);
+                
                 delete m_onPropChangeEventHandler;
             }
-            
-            delete patternCallbackData;
-            delete m_patternMap;
-            delete m_lock;
+
+            if (m_patternMap != NULL)
+            {
+                m_patternMap->Release();
+                delete m_patternMap;
+                m_patternMap = NULL;
+            }
         }
 
         void PatternManager::SetExInterface(CMachineInterfaceEx* iface)
@@ -223,7 +249,7 @@ namespace ReBuzz
             std::lock_guard<std::mutex> lg(*m_lock);
 
             //We need the machine CMachineDataPtr as an int64 to use the name map
-            int64_t cmachineid = rebuzzmac->CMachinePtr.ToInt64();
+            int64_t cmachineid = Utils::ObjectToInt64(rebuzzmac);
             
             //Get the CPattern * from the name map
             PatternCreateCallbackData* patternCallbackData = reinterpret_cast<PatternCreateCallbackData*>(m_patternCallbackData);
@@ -249,8 +275,9 @@ namespace ReBuzz
                 {
                     if (clrPatName == pat->Name)
                     {
-                        patternCallbackData->patternNameMap[cmachineid][name] = pat->GetHashCode();                        
-                        return m_patternMap->GetOrStoreReBuzzTypeById(pat->GetHashCode(), pat);
+                        int64_t patId = Utils::ObjectToInt64(pat);
+                        patternCallbackData->patternNameMap[cmachineid][name] = patId;
+                        return m_patternMap->GetOrStoreReBuzzTypeById(patId, pat);
                     }
                 }
             }
@@ -277,7 +304,7 @@ namespace ReBuzz
                 std::lock_guard<std::mutex> lg(*m_lock);
 
                 //Get/Store pattern
-                uint64_t id = p->GetHashCode();
+                uint64_t id = Utils::ObjectToInt64(p);
                 cRetPat = m_patternMap->GetOrStoreReBuzzTypeById(id, p);
                 exIface = m_exInterface;
 

@@ -14,7 +14,7 @@ namespace ReBuzz
         public ref class MachineEventWrapper
         {
         public:
-            MachineEventWrapper(CMachineInterface* machineIface);
+            MachineEventWrapper(IMachine^ self, CMachineInterface* machineIface);
 
             ~MachineEventWrapper();
 
@@ -32,6 +32,7 @@ namespace ReBuzz
             std::vector<void*>* m_callbackParams;
             System::Action<IMachine^>^ m_action;
             CMachineInterface* m_machineInterface;
+            int64_t m_selfId;
         };
     }
 }

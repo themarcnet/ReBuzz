@@ -28,7 +28,15 @@ namespace ReBuzz
             {}
 
             ~RebuzzBuzzLookup()
-            {}
+            {
+                Release();
+            }
+
+            void Release()
+            {
+                m_idToRefMap.clear();
+                m_idToDataMap.clear();
+            }
 
             BuzzType* GetBuzzTypeById(uint64_t id) const
             {

@@ -127,6 +127,8 @@ public:
      }
 
 private:
+    void Initialise();
+
     IBuzzMachineHost^ m_host;
     CMachineInterface* m_interface;
     bool m_dummyParam;
