@@ -81,12 +81,9 @@ ReBuzzPatternXpMachine::ReBuzzPatternXpMachine(IBuzzMachineHost^ host) : m_host(
 
 ReBuzzPatternXpMachine::~ReBuzzPatternXpMachine()
 {   
-    delete m_machineWrapper;
-    delete m_interface;
-    
-    ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(m_callbackdata);
-    delete callbackData;
+    Release();
 
+    delete m_interface;
     delete m_patternEditor;
 }
 
@@ -394,7 +391,27 @@ void ReBuzzPatternXpMachine::Activate()
 
 void ReBuzzPatternXpMachine::Release()
 {
-    m_machineWrapper->Release();
+    if (m_patternEditor != NULL)
+    {
+        m_patternEditor->Free();
+        delete m_patternEditor;
+        m_patternEditor = NULL;
+    }
+
+    if (m_machineWrapper != nullptr)
+    {
+        m_machineWrapper->Release();
+        delete m_machineWrapper;
+        m_machineWrapper = nullptr;
+    }
+
+    if (m_callbackdata != NULL)
+    {
+        ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(m_callbackdata);
+        delete callbackData;
+        m_callbackdata = NULL;
+    }
+
     m_initialised = false;
 }
 
