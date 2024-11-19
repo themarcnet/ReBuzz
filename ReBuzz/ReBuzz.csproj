@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFrameworks>net9.0-windows</TargetFrameworks>
     <OutputType>WinExe</OutputType>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
@@ -18,19 +18,13 @@
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UseWPF>true</UseWPF>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
     <Platforms>AnyCPU;x64</Platforms>
-	<IntermediateOutputPath>$(SolutionDir)build\$(Configuration)\serilog\obj</IntermediateOutputPath>
-	
-	<GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-  <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
-  <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>  
-  <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-  <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
-  <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-  <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
-	
+    <UseWindowsThreadPool>true</UseWindowsThreadPool>
+    <CETCompat>false</CETCompat>
+    <IntermediateOutputPath>$(SolutionDir)build\$(Configuration)\serilog\obj</IntermediateOutputPat>
   </PropertyGroup>
   
   
@@ -164,4 +158,19 @@
     <Title>ReBuzz</Title>
     <BaseOutputPath>$(SolutionDir)bin</BaseOutputPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-windows|AnyCPU'">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-windows|x64'">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.1.0" />
+    <PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.0" />
+    <PackageReference Include="System.Text.Json" Version="9.0.0" />
+    <PackageReference Include="VST.NET2-Host" Version="2.1.0" />
+    <PackageReference Include="VST.NET2-Plugin" Version="2.1.0" />
+  </ItemGroup>
 </Project>
