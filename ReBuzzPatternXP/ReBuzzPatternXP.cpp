@@ -53,6 +53,19 @@ static void RedrawEditorWindow(void* param)
     pmi->patEd->RedrawWindow();
 }
 
+static LRESULT OnMouseRightClick(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, void* callbackParam, bool* pbBlock)
+{
+    ReBuzzPatternXpCallbackData* cbdata = reinterpret_cast<ReBuzzPatternXpCallbackData*>(callbackParam);
+
+    //Show custom right-click menu, to allow features that ReBuzz does not provide on its UI
+    // (like create and delete patterns)
+
+
+
+    *pbBlock = false;
+    return 0;
+}
+
 //=====================================================
 ReBuzzPatternXpMachine::ReBuzzPatternXpMachine(IBuzzMachineHost^ host) : m_host(host),
                                                                          m_dummyParam(false),
@@ -134,6 +147,10 @@ UserControl^ ReBuzzPatternXpMachine::PatternEditorControl()
     }
 
     m_patternEditor = new RefClassWrapper<UserControl>(m_machineWrapper->PatternEditorControl());
+
+    //Override the mouse click
+    m_machineWrapper->OverridePatternEditorWindowsMessage(WM_CONTEXTMENU, IntPtr(OnMouseRightClick), m_callbackdata);
+
     return m_patternEditor->GetRef();
 }
 

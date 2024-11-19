@@ -8,6 +8,8 @@
 #include "MachineManager.h"
 #include "PatternManager.h"
 
+#include <unordered_map>
+
 using System::Windows::Forms::UserControl;
 using System::Windows::Forms::KeyEventArgs;
 using System::Windows::Forms::KeyEventHandler;
@@ -32,6 +34,10 @@ namespace ReBuzz
 
         typedef void (*OnPatternEditorCreateCallback)(void* param);
 
+        typedef LRESULT(*OnWindowsMessage)(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, void * callbackParam, bool* pbBlock);
+
+        #pragma make_public(OnWindowsMessage) ;
+
         public ref class MachineWrapper : System::IDisposable
         {
         public:
@@ -49,6 +55,12 @@ namespace ReBuzz
             IMachine^ GetThisReBuzzMachine();
 
             UserControl^ PatternEditorControl();
+
+            void OverridePatternEditorWindowsMessage(UINT msg, IntPtr callback, void* param);
+
+            WNDPROC GetEditorWndProc();
+
+            OnWindowsMessage GetEditorOverrideCallback(UINT msg, void** param);
 
             void SetEditorPattern(IPattern^ pattern);
 
@@ -116,7 +128,6 @@ namespace ReBuzz
 
             void Tick();
 
-            
         private:
             static IntPtr RebuzzWindowAttachCallback(IntPtr hwnd, void* callbackParam);
             static void RebuzzWindowDettachCallback(IntPtr cwnd, void* callbackParam);
@@ -130,8 +141,6 @@ namespace ReBuzz
 
             void SendMessageToKeyboardWindow(UINT msg, WPARAM wparam, LPARAM lparam);
 
-            
-            
             RebuzzBuzzLookup<IWaveLayer, int, CWaveLevel> * m_waveLevelsMap;
             RebuzzBuzzLookup<ISequence, int, CSequence>* m_sequenceMap;
             
@@ -144,6 +153,7 @@ namespace ReBuzz
             CMachine* m_thisCMachine;
             IBuzzMachineHost^ m_host;
             HWND m_hwndEditor;
+            WNDPROC m_wndprocEditor;
             bool m_initialised;
             IBuzzMachine^ m_buzzmachine;
             CMasterInfo* m_masterInfo;
@@ -164,7 +174,8 @@ namespace ReBuzz
             void* m_kbFocusCallbackParam;
             KeyEventHandler^ m_onKeyDownHandler;
             KeyEventHandler^ m_onKeyupHandler;
-        
+            std::unordered_map<UINT, OnWindowsMessage> * m_editorMessageMap;
+            std::unordered_map<UINT, void *> * m_editorMessageParamMap;
         };
     }
 }

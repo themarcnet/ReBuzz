@@ -9,6 +9,8 @@
 #include "NativeMachineWriter.h"
 #include "NativeMachineReader.h"
 
+#include <sstream>
+
 using BuzzGUI::Common::Global;
 
 using BuzzGUI::Interfaces::IParameterGroup;
@@ -23,7 +25,35 @@ namespace ReBuzz
 {
     namespace NativeMachineFramework
     {
-        
+        static LRESULT CALLBACK OverriddenWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+        {
+            //Get class instance
+            LONG_PTR instance = GetWindowLongPtr(hWnd, GWLP_USERDATA);
+            RefClassWrapper<MachineWrapper>* classRef = reinterpret_cast<RefClassWrapper<MachineWrapper> *>(instance);
+            /*
+            std::ostringstream msg;
+            msg << "uMsg = " << uMsg << " \r\n";
+            OutputDebugStringA(msg.str().c_str());
+            */
+
+            //Get override
+            void* callbackParam = NULL;
+            OnWindowsMessage callbackProc = classRef->GetRef()->GetEditorOverrideCallback(uMsg, &callbackParam);
+            if (callbackProc != NULL)
+            {
+                bool block = false;
+                LRESULT res = callbackProc(hWnd, uMsg, wParam, lParam, callbackParam, &block);
+                
+                //If callback specified to not pass the message onto the actual window, then return now.
+                if (block)
+                    return res;
+            }
+
+
+            //Call the real window proc
+            return ::CallWindowProc( classRef->GetRef()->GetEditorWndProc(), hWnd, uMsg, wParam, lParam);
+        }
+
        
         void MachineWrapper::OnSequenceCreatedByReBuzz(int seq)
         {
@@ -83,7 +113,9 @@ namespace ReBuzz
                                                                      m_kbFocusWndcallback(kbcallback),
                                                                      m_kbFocusCallbackParam(callbackparam),
                                                                      m_onKeyDownHandler(nullptr),
-                                                                     m_onKeyupHandler(nullptr)
+                                                                     m_onKeyupHandler(nullptr),
+                                                                     m_editorMessageMap(new std::unordered_map<UINT, OnWindowsMessage>()),
+                                                                     m_editorMessageParamMap( new std::unordered_map<UINT, void *>())
         {
             //Create machine manager
             m_machineMgr = gcnew MachineManager();
@@ -121,6 +153,7 @@ namespace ReBuzz
             delete m_waveLevelsMap;
             delete m_sequenceMap;
             delete m_masterInfo;
+            
         }
 
         void MachineWrapper::Init()
@@ -161,8 +194,16 @@ namespace ReBuzz
         {
             if (m_hwndEditor != NULL)
             {
+                //Restore the window proc first!
+                if (m_wndprocEditor != NULL)
+                {
+                    SetWindowLong(m_hwndEditor, GWLP_WNDPROC, (LONG_PTR)m_wndprocEditor);
+                    m_wndprocEditor = NULL;
+                }
+
                 CloseWindow(m_hwndEditor);
                 DestroyWindow(m_hwndEditor);
+                m_hwndEditor = NULL;
             }
 
             if (m_callbackWrapper != NULL)
@@ -208,6 +249,18 @@ namespace ReBuzz
                 m_patternMgr->Release();
                 delete m_patternMgr;
                 m_patternMgr = nullptr;
+            }
+
+            if (m_editorMessageMap != NULL)
+            {
+                delete m_editorMessageMap;
+                m_editorMessageMap = NULL;
+            }
+
+            if (m_editorMessageParamMap != NULL)
+            {
+                delete m_editorMessageParamMap;
+                m_editorMessageParamMap = NULL;
             }
         }
 
@@ -304,6 +357,11 @@ namespace ReBuzz
             //Store the HWND in the class for sending window messages
             classRef->GetRef()->m_hwndEditor = (HWND)patternEditorHwnd;
 
+            //Overide the wndproc so we can intercept window events
+            classRef->GetRef()->m_wndprocEditor = (WNDPROC)GetWindowLongPtr((HWND)patternEditorHwnd, GWLP_WNDPROC);
+            SetWindowLongPtr((HWND)patternEditorHwnd, GWLP_WNDPROC, (LONG_PTR)OverriddenWindowProc);
+            SetWindowLongPtr((HWND)patternEditorHwnd, GWLP_USERDATA, (LONG_PTR)classRef);
+
             //If we have a pattern to set, then do that now
             //(it was deferred from earlier)
             if( (classRef->GetRef()->m_initialised) &&
@@ -330,6 +388,11 @@ namespace ReBuzz
                 classRef->GetRef()->m_editorCreateCallback(classRef->GetRef()->m_kbFocusCallbackParam);
 
             return IntPtr(patternEditorHwnd);
+        }
+
+        WNDPROC MachineWrapper::GetEditorWndProc()
+        {
+            return m_wndprocEditor;
         }
 
         void MachineWrapper::RebuzzWindowDettachCallback(IntPtr patternEditorHwnd, void* callbackParam)
@@ -376,6 +439,31 @@ namespace ReBuzz
             }
 
             return m_control;
+        }
+
+        void MachineWrapper::OverridePatternEditorWindowsMessage(UINT msg, IntPtr callback, void* param)
+        {
+            (*m_editorMessageMap)[msg] = reinterpret_cast<OnWindowsMessage>( callback.ToPointer());
+            (*m_editorMessageParamMap)[msg] = param;
+        }
+
+        OnWindowsMessage MachineWrapper::GetEditorOverrideCallback(UINT msg, void** param)
+        {
+            const auto& msgHandler = m_editorMessageMap->find(msg);
+            if (msgHandler == m_editorMessageMap->end())
+                return NULL;
+
+            const auto& msgHandlerParam = m_editorMessageParamMap->find(msg);
+            if (msgHandlerParam == m_editorMessageParamMap->end())
+            {
+                *param = NULL;
+            }
+            else
+            {
+                *param = (*msgHandlerParam).second;
+            }
+
+            return (*msgHandler).second;
         }
 
         static int FindParameterGroupAndParam(IMachine^ mach, IParameter^ param, int * retParamNum)
