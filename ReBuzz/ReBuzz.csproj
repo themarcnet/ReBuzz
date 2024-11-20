@@ -163,13 +163,5 @@
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-windows|x64'">
     <DebugType>full</DebugType>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Serilog" Version="4.1.0" />
-    <PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />
-    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.0" />
-    <PackageReference Include="System.Text.Json" Version="9.0.0" />
-    <PackageReference Include="VST.NET2-Host" Version="2.1.0" />
-    <PackageReference Include="VST.NET2-Plugin" Version="2.1.0" />
-  </ItemGroup>
+
 </Project>
