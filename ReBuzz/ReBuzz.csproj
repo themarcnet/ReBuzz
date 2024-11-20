@@ -24,7 +24,7 @@
     <Platforms>AnyCPU;x64</Platforms>
     <UseWindowsThreadPool>true</UseWindowsThreadPool>
     <CETCompat>false</CETCompat>
-    <IntermediateOutputPath>$(SolutionDir)build\$(Configuration)\serilog\obj</IntermediateOutputPat>
+    <IntermediateOutputPath>$(SolutionDir)build\$(Configuration)\serilog\obj</IntermediateOutputPath>
   </PropertyGroup>
   
   
@@ -82,7 +82,6 @@
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.3" />
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="App.config" />
