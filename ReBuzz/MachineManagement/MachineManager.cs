@@ -951,6 +951,7 @@ namespace ReBuzz.MachineManagement
             else if (nativeMachines.ContainsKey(machine) && machine.DLL.Info.Version > BUZZ_MACHINE_INTERFACE_VERSION_15)
             {
                 var machineHost = NativeMachines[machine];
+                machineHost.UIMessage.UIRemapMachineNames(machine, importDictionary);   // Send machine mappings
                 machineHost.UIMessage.ImportFinished(machine);
             }
         }
@@ -1115,7 +1116,7 @@ namespace ReBuzz.MachineManagement
             return 4; // Buzz ticks per beat
         }
 
-        internal void RemapMachineNames(MachineCore machine, Dictionary<string, string> dict)
+        internal void RemapMachineNames(MachineCore machine, IDictionary<string, string> dict)
         {
             if (machine != null && nativeMachines.ContainsKey(machine) && machine.Ready)
             {
