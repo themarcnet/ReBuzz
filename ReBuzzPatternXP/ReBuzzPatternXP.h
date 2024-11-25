@@ -19,6 +19,7 @@ using System::Collections::Generic::IDictionary;
 using System::Windows::Forms::UserControl;
 using System::Collections::Generic::IEnumerable;
 
+using ReBuzz::NativeMachineFramework::ContextMenu;
 using ReBuzz::NativeMachineFramework::MachineWrapper;
 
 
@@ -95,6 +96,8 @@ public:
 
     void CreatePatternCopy(IPattern^ pnew, IPattern^ p);
 
+    void ShowContextMenu();
+
     //======================= Property Changed Events ======================
     event PropertyChangedEventHandler^ PropertyChanged
     {
@@ -124,7 +127,8 @@ public:
         {
             m_dummyParam = val;
         }
-     }
+    }
+
 
 private:
     IBuzzMachineHost^ m_host;
@@ -134,4 +138,5 @@ private:
     bool m_initialised;
     void* m_callbackdata;
     ReBuzz::NativeMachineFramework::RefClassWrapper<UserControl> * m_patternEditor;
+    ContextMenu^ m_contextmenu;
 };

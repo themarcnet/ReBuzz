@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <commctrl.h>
 #include <map>
 
 #include "Buzz\MachineInterface.h"
@@ -25,11 +26,18 @@ namespace ReBuzz
 {
     namespace NativeMachineFramework
     {
-        static LRESULT CALLBACK OverriddenWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+        //static LRESULT CALLBACK OverriddenWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+        static const UINT_PTR s_uiSubClassId = 0x07eb0220; //ID I made up for use with WndProc sub classing routines
+
+        static LRESULT CALLBACK OverriddenWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
         {
             //Get class instance
-            LONG_PTR instance = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-            RefClassWrapper<MachineWrapper>* classRef = reinterpret_cast<RefClassWrapper<MachineWrapper> *>(instance);
+            RefClassWrapper<MachineWrapper>* classRef = reinterpret_cast<RefClassWrapper<MachineWrapper> *>(dwRefData);
+            if (classRef == NULL)
+            {
+                return 0;
+            }
+
             /*
             std::ostringstream msg;
             msg << "uMsg = " << uMsg << " \r\n";
@@ -49,9 +57,8 @@ namespace ReBuzz
                     return res;
             }
 
-
             //Call the real window proc
-            return ::CallWindowProc( classRef->GetRef()->GetEditorWndProc(), hWnd, uMsg, wParam, lParam);
+            return DefSubclassProc(hWnd, uMsg, wParam, lParam);
         }
 
        
@@ -63,6 +70,15 @@ namespace ReBuzz
         void MachineWrapper::OnSequecneRemovedByReBuzz(int seq)
         {
 
+        }
+
+        void MachineWrapper::OnMachineCreatedByReBuzz(IMachine^ machine)
+        {
+            //Update pattern manager with patterns from this machine
+            m_patternMgr->ScanMachineForPatterns(machine);
+
+            //Machine Manager registers its own event handler for this, so we don't
+            //need to explicitly call it here.
         }
 
         static void updateWaveLevel(CWaveLevel* buzzwavlevel, IWaveLayer^ rebuzzWaveLayer)
@@ -142,6 +158,10 @@ namespace ReBuzz
             //Ask ReBuzz to tell us when a sequence has been removed
             m_seqRemovedAction = gcnew System::Action<int>(this, &MachineWrapper::OnSequecneRemovedByReBuzz);
             Global::Buzz->Song->SequenceRemoved += m_seqRemovedAction;
+
+            //Ask ReBuzz to tell us when a machine has been added
+            m_machineAddedAction = gcnew System::Action<IMachine^>(this, &MachineWrapper::OnMachineCreatedByReBuzz);
+            Global::Buzz->Song->MachineAdded += m_machineAddedAction;
         }
 
         MachineWrapper::~MachineWrapper()
@@ -168,7 +188,7 @@ namespace ReBuzz
                 m_machine->pMasterInfo = m_masterInfo;
                 
                 //Create callback wrapper class
-                m_callbackWrapper = new MachineCallbackWrapper(this, m_buzzmachine, m_host, m_machine, m_thisCMachine, m_masterInfo);
+                m_callbackWrapper = new MachineCallbackWrapper(this, m_machineMgr, m_buzzmachine, m_host, m_machine, m_thisCMachine, m_masterInfo);
 
                 //Set the callback instance on the machine interface 
                 m_machine->pCB = (CMICallbacks*)m_callbackWrapper;
@@ -195,12 +215,9 @@ namespace ReBuzz
             if (m_hwndEditor != NULL)
             {
                 //Restore the window proc first!
-                if (m_wndprocEditor != NULL)
-                {
-                    SetWindowLong(m_hwndEditor, GWLP_WNDPROC, (LONG_PTR)m_wndprocEditor);
-                    m_wndprocEditor = NULL;
-                }
-
+                RemoveWindowSubclass(m_hwndEditor, OverriddenWindowProc, s_uiSubClassId);
+                
+                //Destroy the window
                 CloseWindow(m_hwndEditor);
                 DestroyWindow(m_hwndEditor);
                 m_hwndEditor = NULL;
@@ -211,10 +228,12 @@ namespace ReBuzz
                 m_callbackWrapper->Release();
             }
 
+            Global::Buzz->Song->MachineAdded -= m_machineAddedAction;
             Global::Buzz->Song->SequenceAdded -= m_seqAddedAction;
             Global::Buzz->Song->SequenceRemoved -= m_seqRemovedAction;
             delete m_seqAddedAction;
             delete m_seqRemovedAction;
+            delete m_machineAddedAction;
 
             if (m_control != nullptr)
             {
@@ -358,9 +377,7 @@ namespace ReBuzz
             classRef->GetRef()->m_hwndEditor = (HWND)patternEditorHwnd;
 
             //Overide the wndproc so we can intercept window events
-            classRef->GetRef()->m_wndprocEditor = (WNDPROC)GetWindowLongPtr((HWND)patternEditorHwnd, GWLP_WNDPROC);
-            SetWindowLongPtr((HWND)patternEditorHwnd, GWLP_WNDPROC, (LONG_PTR)OverriddenWindowProc);
-            SetWindowLongPtr((HWND)patternEditorHwnd, GWLP_USERDATA, (LONG_PTR)classRef);
+            SetWindowSubclass((HWND)patternEditorHwnd, OverriddenWindowProc, s_uiSubClassId, (DWORD_PTR)classRef);
 
             //If we have a pattern to set, then do that now
             //(it was deferred from earlier)
@@ -388,11 +405,6 @@ namespace ReBuzz
                 classRef->GetRef()->m_editorCreateCallback(classRef->GetRef()->m_kbFocusCallbackParam);
 
             return IntPtr(patternEditorHwnd);
-        }
-
-        WNDPROC MachineWrapper::GetEditorWndProc()
-        {
-            return m_wndprocEditor;
         }
 
         void MachineWrapper::RebuzzWindowDettachCallback(IntPtr patternEditorHwnd, void* callbackParam)

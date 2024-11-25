@@ -58,8 +58,6 @@ namespace ReBuzz
 
             void OverridePatternEditorWindowsMessage(UINT msg, IntPtr callback, void* param);
 
-            WNDPROC GetEditorWndProc();
-
             OnWindowsMessage GetEditorOverrideCallback(UINT msg, void** param);
 
             void SetEditorPattern(IPattern^ pattern);
@@ -135,6 +133,7 @@ namespace ReBuzz
             
             void OnSequenceCreatedByReBuzz(int seq);
             void OnSequecneRemovedByReBuzz(int seq);
+            void OnMachineCreatedByReBuzz(IMachine^ machine);
 
             void OnKeyDown(Object^ sender, KeyEventArgs^ args);
             void OnKeyUp(Object^ sender, KeyEventArgs^ args);
@@ -153,7 +152,6 @@ namespace ReBuzz
             CMachine* m_thisCMachine;
             IBuzzMachineHost^ m_host;
             HWND m_hwndEditor;
-            WNDPROC m_wndprocEditor;
             bool m_initialised;
             IBuzzMachine^ m_buzzmachine;
             CMasterInfo* m_masterInfo;
@@ -176,6 +174,8 @@ namespace ReBuzz
             KeyEventHandler^ m_onKeyupHandler;
             std::unordered_map<UINT, OnWindowsMessage> * m_editorMessageMap;
             std::unordered_map<UINT, void *> * m_editorMessageParamMap;
+
+            System::Action<IMachine^>^ m_machineAddedAction;
         };
     }
 }

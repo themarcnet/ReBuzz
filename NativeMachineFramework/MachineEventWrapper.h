@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MachineManager.h"
 #include "Buzz\MachineInterface.h"
 #include <vector>
 
@@ -14,7 +15,7 @@ namespace ReBuzz
         public ref class MachineEventWrapper : System::IDisposable
         {
         public:
-            MachineEventWrapper(IMachine^ self, CMachineInterface* machineIface);
+            MachineEventWrapper(MachineManager^ machmgr, IMachine^ self, CMachineInterface* machineIface);
 
             ~MachineEventWrapper();
 
@@ -28,6 +29,7 @@ namespace ReBuzz
 
         private:
 
+            MachineManager^ m_machmgr;
             std::vector<EVENT_HANDLER_PTR>* m_callbacks;
             std::vector<void*>* m_callbackParams;
             System::Action<IMachine^>^ m_action;

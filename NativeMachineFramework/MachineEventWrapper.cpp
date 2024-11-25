@@ -1,6 +1,9 @@
 
+
 #include "MachineEventWrapper.h"
 #include "Utils.h"
+
+using ReBuzz::NativeMachineFramework::MachineManager;
 
 namespace ReBuzz
 {
@@ -8,8 +11,10 @@ namespace ReBuzz
     namespace NativeMachineFramework
     {
 
-        MachineEventWrapper::MachineEventWrapper(IMachine^ self, 
-                                                 CMachineInterface* machineIface) : m_machineInterface(machineIface),
+        MachineEventWrapper::MachineEventWrapper(MachineManager^ machmgr, 
+                                                 IMachine^ self,
+                                                 CMachineInterface* machineIface) : m_machmgr(machmgr),
+                                                                                    m_machineInterface(machineIface),
                                                                                     m_action(nullptr)
         {
             m_callbacks = new std::vector<EVENT_HANDLER_PTR>();
@@ -33,12 +38,17 @@ namespace ReBuzz
             if (machineId == m_selfId)
                 return;
 
+            //Get the native machine
+            CMachine* nativeMachine = m_machmgr->GetOrStoreMachine(machine);
+            if (nativeMachine == NULL)
+                return;
+
             //Call all the callbacks
             for (size_t x = 0; x < m_callbacks->size(); ++x)
             {
                 EVENT_HANDLER_PTR callback = (*m_callbacks)[x];
                 void* param = (*m_callbackParams)[x];
-                (*m_machineInterface.*callback)(param);
+                (*m_machineInterface.*callback)(nativeMachine);
             }
         }
 

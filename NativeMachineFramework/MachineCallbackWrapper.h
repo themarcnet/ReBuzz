@@ -27,6 +27,7 @@ namespace ReBuzz
         {
         public:
             MachineCallbackWrapper(ref class MachineWrapper^ mw,
+                                   ref class MachineManager^ mm,
                                    IBuzzMachine^ netmach,
                                    IBuzzMachineHost^ host,
                                    CMachineInterface* iface, 
@@ -71,6 +72,8 @@ namespace ReBuzz
             void ControlChange(CMachine* pmac, int group, int track, int param, int value) override;
             void SendControlChanges(CMachine* pmac) override;
             
+            int GetBaseOctave() override;
+            void SetPatternEditorMachine(CMachine* pmac, bool gotoeditor) override;
 
             //------------------------------------------------------------------------------------
             //API that is delayed - to be called API when exInterface is set
@@ -88,6 +91,7 @@ namespace ReBuzz
             RefClassWrapper<IBuzzMachine> m_netmcahine;
             RefClassWrapper<IBuzzMachineHost> m_machinehost;
             RefClassWrapper<ref class MachineWrapper> m_machineWrapper;
+            RefClassWrapper<MachineManager> m_machineMgr;
             CMachine* m_thisMachine;
             CSubTickInfo m_subtickInfo;
 

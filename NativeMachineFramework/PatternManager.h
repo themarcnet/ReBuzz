@@ -41,6 +41,8 @@ namespace ReBuzz
             CPatternData* GetBuzzPatternData(CPattern * pat);
 
             void OnNativePatternChange(CPattern* pat, int newLen, const char * newName );
+
+            void ScanMachineForPatterns(IMachine^ mach);
             
         private:
             

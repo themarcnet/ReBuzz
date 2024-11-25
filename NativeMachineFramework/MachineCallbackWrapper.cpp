@@ -26,6 +26,7 @@ namespace ReBuzz
       
 
         MachineCallbackWrapper::MachineCallbackWrapper(MachineWrapper^ mw, 
+                                                       MachineManager^ mm,
                                                         IBuzzMachine^  netmach,
                                                         IBuzzMachineHost^ host,
                                                         CMachineInterface* iface, 
@@ -34,6 +35,7 @@ namespace ReBuzz
                                                                                 m_netmcahine(netmach),
                                                                                 m_machinehost(host),
                                                                                 m_machineWrapper(mw),
+                                                                                m_machineMgr(mm),
                                                                                 m_thisMachine(machine),
                                                                                 m_exInterface(NULL),
                                                                                 m_interface(iface),
@@ -114,7 +116,7 @@ namespace ReBuzz
                     //Ask ReBuzz to call us back if a machine is added to the song
                     if (m_addedMachineEventHandler.isNull())
                     {
-                        m_addedMachineEventHandler = gcnew MachineEventWrapper(m_machinehost.GetRef()->Machine,m_interface);
+                        m_addedMachineEventHandler = gcnew MachineEventWrapper(m_machineMgr.GetRef(), m_machinehost.GetRef()->Machine, m_interface);
 
                         //Tell ReBuzz to call the event handler on event, which will call all the registered callbacks
                         MachineEventWrapper^ eventHandler = m_addedMachineEventHandler.GetRef();
@@ -130,7 +132,7 @@ namespace ReBuzz
                     //Ask ReBuzz to call us back if a machine is added to the song
                     if (m_deleteMachineEventHandler.isNull())
                     {
-                        m_deleteMachineEventHandler = gcnew MachineEventWrapper(m_machinehost.GetRef()->Machine, m_interface);
+                        m_deleteMachineEventHandler = gcnew MachineEventWrapper(m_machineMgr.GetRef(), m_machinehost.GetRef()->Machine, m_interface);
 
                         //Tell ReBuzz to call our method on event, which will call all the registered callbacks
                         MachineEventWrapper^ eventHandler = m_deleteMachineEventHandler.GetRef();
@@ -512,6 +514,26 @@ namespace ReBuzz
 
             //Tell machine about the control changes
             rebuzzmach->SendControlChanges();
+        }
+
+        int MachineCallbackWrapper::GetBaseOctave()
+        {
+            IMachine^ mach = m_machineWrapper.GetRef()->GetThisReBuzzMachine();
+            return mach->BaseOctave;
+        }
+
+        void MachineCallbackWrapper::SetPatternEditorMachine(CMachine* pmac, bool gotoeditor)
+        {
+            IMachine^ mach = m_machineWrapper.GetRef()->GetReBuzzMachine(pmac);
+            if ((mach == nullptr) || (m_exInterface == NULL))
+            {
+                m_setPatternEditorMachine = pmac;
+            }
+            else
+            {
+                //m_exInterface->SetPatternTargetMachine
+            }
+
         }
     }
 }

@@ -400,6 +400,17 @@ namespace ReBuzz
             if(hasChanged)
                 rebuzzPat->NotifyPatternChanged();
         }
+
+        void PatternManager::ScanMachineForPatterns(IMachine^ mach)
+        {
+            std::lock_guard<std::mutex> lg(*m_lock);
+
+            for each (IPattern^ p in mach->Patterns )
+            {
+                int64_t patid = Utils::ObjectToInt64(p);
+                GetOrStorePattern(p);
+            }
+        }
     }
 
 }

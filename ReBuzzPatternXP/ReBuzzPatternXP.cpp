@@ -1,3 +1,5 @@
+
+
 //For some calls, we need access to the raw mi class members.
 //In order to do that, because mi is self contained within a single source file, we have to 
 //include PatternXp.cpp
@@ -11,9 +13,16 @@
 #include <NativeMachineWriter.h>
 #include <Utils.h>
 
+
 #include "ReBuzzPatternXP.h"
 #include <memory>
 #include "stdafx.h"
+
+enum  ContextMenuId
+{
+    CreatePattern,
+    PatternProperties
+};
 
 
 using namespace ReBuzz::NativeMachineFramework;
@@ -26,13 +35,15 @@ using System::IntPtr;
 using System::Collections::Generic::IEnumerable;
 using System::Collections::Generic::List;
 
+
+
 //Callback data
 struct ReBuzzPatternXpCallbackData
 {
     CMachineInterface* machineInterface;
     CMachineInterfaceEx* machineInterfaceEx;
     RefClassWrapper<MachineWrapper> machineWrapper;
-    mi* machine;
+    RefClassWrapper<ReBuzzPatternXpMachine> parent;
 };
 
 //Callbacks
@@ -53,16 +64,41 @@ static void RedrawEditorWindow(void* param)
     pmi->patEd->RedrawWindow();
 }
 
+static void OnMenuItem_CreatePattern(int id, void* param)
+{
+    ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(param);
+    mi* pmi = reinterpret_cast<mi*>(callbackData->machineInterface);
+    
+    //Get the current machine from PatternXP, and then convert that into a ReBuzz machine
+    IMachine^ rebuzzMach =  callbackData->machineWrapper.GetRef()->GetReBuzzMachine(pmi->targetMachine);
+    if (rebuzzMach != nullptr)
+    {
+        //For the pattern name, count the current patters and use that as a 2 digit name
+        int patcount  = rebuzzMach->Patterns->Count;
+        char namebuf[64] = { 0 };
+        sprintf_s(namebuf, "%02d", patcount);
+        String^ patName = gcnew String(namebuf);
+
+        //Create new pattern. 
+        rebuzzMach->CreatePattern(patName, 16);
+    }
+}
+
+static void OnMenuItem_PatternProperties(int id, void* param)
+{
+    ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(param);
+    mi* pmi = reinterpret_cast<mi*>(callbackData->machineInterface);
+
+    pmi->patEd->OnColumns();
+}
+
 static LRESULT OnMouseRightClick(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, void* callbackParam, bool* pbBlock)
 {
     ReBuzzPatternXpCallbackData* cbdata = reinterpret_cast<ReBuzzPatternXpCallbackData*>(callbackParam);
-
-    //Show custom right-click menu, to allow features that ReBuzz does not provide on its UI
-    // (like create and delete patterns)
-
-
-
-    *pbBlock = false;
+    cbdata->parent.GetRef()->ShowContextMenu();
+    
+    //Prevent context menu message being processed further
+    *pbBlock = true;
     return 0;
 }
 
@@ -70,7 +106,8 @@ static LRESULT OnMouseRightClick(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
 ReBuzzPatternXpMachine::ReBuzzPatternXpMachine(IBuzzMachineHost^ host) : m_host(host),
                                                                          m_dummyParam(false),
                                                                          m_initialised(false),
-                                                                         m_patternEditor(NULL)
+                                                                         m_patternEditor(NULL),
+                                                                         m_contextmenu(nullptr)
 {
     m_interface = CreateMachine();
     
@@ -80,7 +117,7 @@ ReBuzzPatternXpMachine::ReBuzzPatternXpMachine(IBuzzMachineHost^ host) : m_host(
     
     mi* pmi = reinterpret_cast<mi*>(m_interface);
     cbdata->machineInterfaceEx = &pmi->ex;
-    cbdata->machine = pmi;
+    cbdata->parent = this;
     m_callbackdata = cbdata;
 
     //Create machine wrapper
@@ -96,8 +133,8 @@ ReBuzzPatternXpMachine::~ReBuzzPatternXpMachine()
 {   
     Release();
 
+    delete m_contextmenu;
     delete m_interface;
-    delete m_patternEditor;
 }
 
 void ReBuzzPatternXpMachine::Work()
@@ -148,10 +185,22 @@ UserControl^ ReBuzzPatternXpMachine::PatternEditorControl()
 
     m_patternEditor = new RefClassWrapper<UserControl>(m_machineWrapper->PatternEditorControl());
 
+    //Create and build right click menu
+    m_contextmenu = gcnew ContextMenu();
+    m_contextmenu->AddMenuItem(ContextMenuId::CreatePattern, "Create Pattern", OnMenuItem_CreatePattern, m_callbackdata);
+    m_contextmenu->AddMenuItem(ContextMenuId::PatternProperties, "Pattern Properties", OnMenuItem_PatternProperties, m_callbackdata);
+    
+
     //Override the mouse click
     m_machineWrapper->OverridePatternEditorWindowsMessage(WM_CONTEXTMENU, IntPtr(OnMouseRightClick), m_callbackdata);
 
     return m_patternEditor->GetRef();
+}
+
+void ReBuzzPatternXpMachine::ShowContextMenu()
+{
+    if (m_contextmenu != nullptr)
+        m_contextmenu->ShowAtCursor();
 }
 
 void ReBuzzPatternXpMachine::SetEditorPattern(IPattern^ pattern)

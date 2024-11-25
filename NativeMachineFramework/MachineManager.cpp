@@ -402,15 +402,17 @@ namespace ReBuzz
 
         void MachineManager::OnMachineCreatedByReBuzz(IMachine^ machine)
         {
-            std::lock_guard<std::mutex> lg(*m_lock);
-
-            //Do we have this machine in our map?
-            int64_t id = Utils::ObjectToInt64(machine);
-            CMachine* pmach = m_machineMap->GetBuzzTypeById(id);
-            if (pmach == NULL)
             {
-                //Create machine. This will also trigger the above 'CreateMachineCallback'
-                m_machineMap->GetOrStoreReBuzzTypeById(id, machine);
+                std::lock_guard<std::mutex> lg(*m_lock);
+
+                //Do we have this machine in our map?
+                int64_t id = Utils::ObjectToInt64(machine);
+                CMachine* pmach = m_machineMap->GetBuzzTypeById(id);
+                if (pmach == NULL)
+                {
+                    //Create machine. This will also trigger the above 'CreateMachineCallback'
+                    m_machineMap->GetOrStoreReBuzzTypeById(id, machine);
+                }
             }
         }
 
