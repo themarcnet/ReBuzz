@@ -39,6 +39,9 @@ namespace ReBuzz
             CMachineInterfaceEx* GetExInterface() const;
 
             void Release();
+
+            void OnMachineAdded(IMachine^ mach);
+            void OnMachineRemoved(IMachine^ mach);
             
             //------------------------------------------------------------------------------------
 

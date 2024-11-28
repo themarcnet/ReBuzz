@@ -26,6 +26,15 @@ namespace ReBuzz
 {
     namespace NativeMachineFramework
     {
+        struct MachineWrapperCallbackData
+        {
+            RefClassWrapper<PatternManager> patternMgr;
+            MachineCallbackWrapper* callbacks;
+            OnPatternEditorRedrawCallback redrawcallback;
+            CMachineInterfaceEx* exiface;
+            void* redrawCBParam;
+        };
+
         //static LRESULT CALLBACK OverriddenWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         static const UINT_PTR s_uiSubClassId = 0x07eb0220; //ID I made up for use with WndProc sub classing routines
 
@@ -61,6 +70,82 @@ namespace ReBuzz
             return DefSubclassProc(hWnd, uMsg, wParam, lParam);
         }
 
+        //Called by the MachineManager whenever a machine is added.
+        static void OnMachineAdded(int64_t id, IMachine^ rebuzzMach, CMachine* buzzMach, void* param)
+        {
+            MachineWrapperCallbackData* cbdata = reinterpret_cast<MachineWrapperCallbackData*>(param);
+
+            //Update pattern manager with patterns from this machine
+            cbdata->patternMgr.GetRef()->ScanMachineForPatterns(rebuzzMach);
+
+            //Register pattern added event handlers to the machine
+            cbdata->patternMgr.GetRef()->AddEventHandlersToMachine(rebuzzMach);
+
+            //Fire registered events that were registered by the native machine via the callback wrapper
+            if (cbdata->callbacks != NULL)
+            {
+                cbdata->callbacks->OnMachineAdded(rebuzzMach);
+            }
+        }
+
+        //Called by the MachineManager whenever a machine is removed.
+        static void OnMachineRemoved(int64_t id, IMachine^ rebuzzMach, CMachine* buzzMach, void* param)
+        {
+            MachineWrapperCallbackData* cbdata = reinterpret_cast<MachineWrapperCallbackData*>(param);
+
+            //First, fire events that were registerd by the native machine via the callback interface
+            //This allows the native machine to handle the deleted event, before the machine is 
+            //physically removed from memory
+            if (cbdata->callbacks != NULL)
+            {
+                cbdata->callbacks->OnMachineRemoved(rebuzzMach);
+            }
+
+            //Remove all patterns for this machine from the pattern manager
+            cbdata->patternMgr.GetRef()->RemovePatternsByMachine(rebuzzMach);
+        }
+
+        //Called by PatternManager whenever a pattern is added
+        static void OnPatternAdded(int64_t id, IPattern^ rebuzzPat, CPattern* buzzPat, PatternEventFlags changeflags, void* param)
+        {
+            MachineWrapperCallbackData* cbdata = reinterpret_cast<MachineWrapperCallbackData*>(param);
+
+            //Notify the machine EX interface
+            if (cbdata->exiface != NULL)
+            {
+                cbdata->exiface->CreatePattern(buzzPat, rebuzzPat->Length);
+            }
+        }
+
+        //Called by PatternManager whenever a pattern is removed
+        static void OnPatternRemoved(int64_t id, IPattern^ rebuzzPat, CPattern* buzzPat, PatternEventFlags changeflags, void* param)
+        {
+            MachineWrapperCallbackData* cbdata = reinterpret_cast<MachineWrapperCallbackData*>(param);
+
+            //Notify the machine EX interface
+            if (cbdata->exiface != NULL)
+            {
+                cbdata->exiface->DeletePattern(buzzPat);
+            }
+        }
+
+        static void OnPatternModified(int64_t id, IPattern^ rebuzzPat, CPattern* buzzPat, PatternEventFlags changeflags, void* param)
+        {
+            MachineWrapperCallbackData* cbdata = reinterpret_cast<MachineWrapperCallbackData*>(param);
+
+            //Notify the machine EX interface
+            if (cbdata->exiface != NULL)
+            {
+                
+            }
+
+            //Call the redraw callback
+            if (cbdata->redrawcallback != NULL)
+            {
+                cbdata->redrawcallback(cbdata->redrawCBParam);
+            }
+        }
+
        
         void MachineWrapper::OnSequenceCreatedByReBuzz(int seq)
         {
@@ -72,14 +157,6 @@ namespace ReBuzz
 
         }
 
-        void MachineWrapper::OnMachineCreatedByReBuzz(IMachine^ machine)
-        {
-            //Update pattern manager with patterns from this machine
-            m_patternMgr->ScanMachineForPatterns(machine);
-
-            //Machine Manager registers its own event handler for this, so we don't
-            //need to explicitly call it here.
-        }
 
         static void updateWaveLevel(CWaveLevel* buzzwavlevel, IWaveLayer^ rebuzzWaveLayer)
         {
@@ -133,11 +210,21 @@ namespace ReBuzz
                                                                      m_editorMessageMap(new std::unordered_map<UINT, OnWindowsMessage>()),
                                                                      m_editorMessageParamMap( new std::unordered_map<UINT, void *>())
         {
+            //Create callback data
+            MachineWrapperCallbackData* internalCallbackData = new MachineWrapperCallbackData();
+            m_internalCallbackData = internalCallbackData;
+            internalCallbackData->callbacks = NULL;
+            internalCallbackData->redrawcallback = redrawcallback;
+            internalCallbackData->exiface = NULL;
+            internalCallbackData->redrawCBParam = callbackparam;
+
             //Create machine manager
-            m_machineMgr = gcnew MachineManager();
+            m_machineMgr = gcnew MachineManager(OnMachineAdded, OnMachineRemoved, m_internalCallbackData);
 
             //Create pattern manager
-            m_patternMgr = gcnew PatternManager(NULL, redrawcallback, callbackparam);
+            //m_patternMgr = gcnew PatternManager(NULL, redrawcallback, m_internalCallbackData);
+            m_patternMgr = gcnew PatternManager(OnPatternAdded, OnPatternRemoved, OnPatternModified, NULL, m_internalCallbackData);
+            internalCallbackData->patternMgr.Assign(m_patternMgr);
 
             m_waveLevelsMap = new RebuzzBuzzLookup<IWaveLayer, int, CWaveLevel>(OnNewBuzzWaveLevel, m_mapCallbackData);
             m_sequenceMap = new RebuzzBuzzLookup<ISequence, int, CSequence>(OnNewSequence, m_mapCallbackData);
@@ -158,10 +245,6 @@ namespace ReBuzz
             //Ask ReBuzz to tell us when a sequence has been removed
             m_seqRemovedAction = gcnew System::Action<int>(this, &MachineWrapper::OnSequecneRemovedByReBuzz);
             Global::Buzz->Song->SequenceRemoved += m_seqRemovedAction;
-
-            //Ask ReBuzz to tell us when a machine has been added
-            m_machineAddedAction = gcnew System::Action<IMachine^>(this, &MachineWrapper::OnMachineCreatedByReBuzz);
-            Global::Buzz->Song->MachineAdded += m_machineAddedAction;
         }
 
         MachineWrapper::~MachineWrapper()
@@ -174,12 +257,20 @@ namespace ReBuzz
             delete m_sequenceMap;
             delete m_masterInfo;
             
+            if (m_internalCallbackData != NULL)
+            {
+                MachineWrapperCallbackData* cbdata = reinterpret_cast<MachineWrapperCallbackData*>(m_internalCallbackData);
+                delete cbdata;
+                m_internalCallbackData = NULL;
+            }
         }
 
         void MachineWrapper::Init()
         {
             if (!m_initialised && (m_host->Machine != nullptr))
             {
+                MachineWrapperCallbackData* internalCallbackData = reinterpret_cast<MachineWrapperCallbackData*>(m_internalCallbackData);
+
                 //Store this machine
                 m_thisCMachine = m_machineMgr->GetOrStoreMachine(m_host->Machine);
                 m_rebuzzMachine = m_host->Machine;
@@ -189,6 +280,7 @@ namespace ReBuzz
                 
                 //Create callback wrapper class
                 m_callbackWrapper = new MachineCallbackWrapper(this, m_machineMgr, m_buzzmachine, m_host, m_machine, m_thisCMachine, m_masterInfo);
+                internalCallbackData->callbacks = m_callbackWrapper;
 
                 //Set the callback instance on the machine interface 
                 m_machine->pCB = (CMICallbacks*)m_callbackWrapper;
@@ -204,7 +296,7 @@ namespace ReBuzz
 
                 //We should have an ExInterface at this point, so tell the patten manager
                 CMachineInterfaceEx* exiface = m_callbackWrapper->GetExInterface();
-                m_patternMgr->SetExInterface(exiface);
+                internalCallbackData->exiface = exiface;
 
                 m_initialised = true;
             }
@@ -228,12 +320,12 @@ namespace ReBuzz
                 m_callbackWrapper->Release();
             }
 
-            Global::Buzz->Song->MachineAdded -= m_machineAddedAction;
+            //Global::Buzz->Song->MachineAdded -= m_machineAddedAction;
             Global::Buzz->Song->SequenceAdded -= m_seqAddedAction;
             Global::Buzz->Song->SequenceRemoved -= m_seqRemovedAction;
             delete m_seqAddedAction;
             delete m_seqRemovedAction;
-            delete m_machineAddedAction;
+            //delete m_machineAddedAction;
 
             if (m_control != nullptr)
             {
@@ -393,7 +485,7 @@ namespace ReBuzz
                 classRef->GetRef()->m_patternEditorMachine = NULL;
             }
 
-            //Create and register window event
+            //Create and register window events
             classRef->GetRef()->m_onKeyDownHandler = gcnew KeyEventHandler(classRef->GetRef(), &MachineWrapper::OnKeyDown);
             classRef->GetRef()->m_control->KeyDown += classRef->GetRef()->m_onKeyDownHandler;
 
@@ -585,7 +677,8 @@ namespace ReBuzz
                 return NULL;
 
             uint64_t id = wavelayer->GetHashCode();
-            CWaveLevel* ret =  m_waveLevelsMap->GetOrStoreReBuzzTypeById(id, wavelayer);
+            bool created = false;
+            CWaveLevel* ret =  m_waveLevelsMap->GetOrStoreReBuzzTypeById(id, wavelayer, &created);
 
             //ReBuzz does not notify us of changes to IWaveLayer, so we need to manually update the return data
             updateWaveLevel(ret, wavelayer);
@@ -603,7 +696,8 @@ namespace ReBuzz
         CSequence* MachineWrapper::GetSequence(ISequence^ seq)
         {
             uint64_t id = seq->GetHashCode();
-            return m_sequenceMap->GetOrStoreReBuzzTypeById(id, seq);
+            bool created = false;
+            return m_sequenceMap->GetOrStoreReBuzzTypeById(id, seq, &created);
         }
 
         ISequence^ MachineWrapper::GetReBuzzSequence(CSequence* seq)
@@ -835,7 +929,8 @@ namespace ReBuzz
                         {
                             //Get CSequence * for this sequence
                             uint64_t seqid = s->GetHashCode();
-                            CSequence* cseq = m_sequenceMap->GetOrStoreReBuzzTypeById(seqid, s);
+                            bool created = false;
+                            CSequence* cseq = m_sequenceMap->GetOrStoreReBuzzTypeById(seqid, s, &created);
                             if (cseq != NULL)
                             {
                                 //Tell interface about this pattern and the current play position within

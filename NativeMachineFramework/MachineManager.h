@@ -11,10 +11,14 @@ namespace ReBuzz
 {
     namespace NativeMachineFramework
     {
+        typedef void (*OnMachineEventCallback)(int64_t id, IMachine^ rebuzzMach, CMachine* buzzMach, void * param);
+
         public ref class MachineManager : System::IDisposable
         {
         public:
-            MachineManager();
+            MachineManager(OnMachineEventCallback onMachineAddedCallback,
+                           OnMachineEventCallback onMachineRemovedCallback,
+                           void * callbackParam);
 
             ~MachineManager();
 
@@ -28,7 +32,8 @@ namespace ReBuzz
 
             CMachine * GetOrStoreMachine(IMachine^ m);
 
-       
+            CMachine* GetBuzzMachine(IMachine^ m);
+
 
         private:
             void OnMachineCreatedByReBuzz(IMachine^ machine);
@@ -39,6 +44,11 @@ namespace ReBuzz
             std::mutex* m_lock;
             System::Action<IMachine^>^ m_machineAddedAction;
             System::Action<IMachine^>^ m_machineRemovedAction;
+
+
+            OnMachineEventCallback m_onMachineRemovedCallback;
+            OnMachineEventCallback m_onMachineAddedCallback;
+            void* m_onMachineEventCallbackParam;
         };
     }
 }

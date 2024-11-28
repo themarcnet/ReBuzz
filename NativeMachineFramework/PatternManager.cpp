@@ -25,18 +25,16 @@ namespace ReBuzz
             bool notifyRename = false;
             bool notifyLength = false;
             const char* newnameptr = NULL;
-            CMachineInterfaceEx* notifyInterface;
             CPattern* buzzPat;
             int newLen = 0;
             OnPatternEditorRedrawCallback redrawcallback = NULL;
             void* cbparam = NULL;
-
+            int64_t patid = Utils::ObjectToInt64(rebuzzpat);
             {
                 std::unique_lock<std::mutex> lg(*m_lock, std::defer_lock);
                 if (lock)
                     lg.lock();
 
-                int64_t patid = Utils::ObjectToInt64(rebuzzpat);
                 buzzPat = m_patternMap->GetBuzzTypeById(patid);
                 if (buzzPat == NULL)
                     return;
@@ -45,7 +43,6 @@ namespace ReBuzz
                 if (patdata == NULL)
                     return;
 
-                notifyInterface = m_exInterface;
                 redrawcallback = m_onPatternEditorRedrawCallback;
                 cbparam = m_callbackParam;
 
@@ -68,28 +65,25 @@ namespace ReBuzz
                 }
             }
 
-            //Notify the native machine of changes
-            if (notifyInterface != NULL)
+            //Notify the callback of machine of changes
+            if (m_onPatternChangedCallback != NULL)
             {
+                PatternEventFlags eventFlags = PatternEventFlags_None;
                 if (notifyRename)
                 {
-                    notifyInterface->RenamePattern(buzzPat, newnameptr);
+                    eventFlags = (PatternEventFlags)(eventFlags | PatternEventFlags_Name);
                 }
 
                 if (notifyLength)
                 {
-                    notifyInterface->SetPatternLength(buzzPat, newLen);
+                    eventFlags = (PatternEventFlags)(eventFlags | PatternEventFlags_Length);
                 }
 
-                if ((redrawcallback != NULL) && (notifyLength || notifyRename))
-                {
-                    //Redraw pattern editor
-                    redrawcallback(cbparam);
-                }
+                m_onPatternChangedCallback(patid, rebuzzpat, buzzPat, eventFlags, m_callbackParam);
             }
         }
 
-        void PatternManager::PatternChangeCheckCallback(IPattern^ rebuzzpat, const CPattern* buzzpat, const CPatternData* patdata, void* param)
+        void PatternManager::PatternChangeCheckCallback(uint64_t id, IPattern^ rebuzzpat, CPattern* buzzpat, CPatternData* patdata, void* param)
         {
             RefClassWrapper<PatternManager>* me = reinterpret_cast<RefClassWrapper<PatternManager> *>(param);
             me->GetRef()->OnReBuzzPatternChange(rebuzzpat, false);
@@ -114,6 +108,12 @@ namespace ReBuzz
         void PatternManager::OnPropertyChangedCallback(System::Object^ sender, PropertyChangedEventArgs^ args)
         {
             OnReBuzzPatternChange((IPattern^)sender, true);
+        }
+
+        void PatternManager::OnPatternCreatedByRebuzz(IPattern^ rebuzzpat)
+        {
+            //Make sure we have the pattern, and call any 'added' callbacks if we don't
+            GetOrStorePattern(rebuzzpat);
         }
 
         static void CreatePatternCallback(void* pat, void* param)
@@ -149,14 +149,21 @@ namespace ReBuzz
         }
 
 
-        PatternManager::PatternManager(OnNewPatternCallback onNewPatCallback, 
+        PatternManager::PatternManager(OnPatternEventCallback onPatternAddedCallback,
+                                       OnPatternEventCallback onPatternRemovedCallback,
+                                       OnPatternEventCallback onPatternChangedCallback,
                                        OnPatternEditorRedrawCallback onPatternEditorRedrawCallback,
                                         void * callbackData)
         {
             m_lock = new std::mutex();
 
+            m_eventHandlersAddedToMachines = new std::set<int64_t>();
+            m_machinesEventHandlersAddedTo = new std::vector<RefClassWrapper<IMachine>>();
+
             //Store callbacks to notify changes made by native machine
-            m_onNewPatternCallback = onNewPatCallback;
+            m_onPatternAddedCallback = onPatternAddedCallback;
+            m_onPatternRemovedCallback = onPatternRemovedCallback;
+            m_onPatternChangedCallback = onPatternChangedCallback;
             m_onPatternEditorRedrawCallback = onPatternEditorRedrawCallback;
             m_callbackParam = callbackData;
 
@@ -171,32 +178,41 @@ namespace ReBuzz
             //Set up action for property changes
             m_onPropChangeEventHandler = gcnew PropertyChangedEventHandler(this, &PatternManager::OnPropertyChangedCallback);
 
+            //Set up action for pattern added
+            m_patternAddedAction = gcnew System::Action<IPattern^>(this, &PatternManager::OnPatternCreatedByRebuzz);
+
             //Populate callback data
             patternCallbackData->patternMap = m_patternMap;
             patternCallbackData->patternChangeAction.Assign(m_onPatternChangeAction);
             patternCallbackData->propChangeEventHandler.Assign(m_onPropChangeEventHandler);
         }
 
-        static void RemovePatChangeAction(IPattern^ rebuzzpat, const CPattern* buzzpat, const CPatternData* patdata, void* param)
+        static void RemovePatChangeAction(uint64_t id, IPattern^ rebuzzpat, CPattern* buzzpat,  CPatternData* patdata, void* param)
         {
             RefClassWrapper<System::Action<IPatternColumn^>>* tmpact = reinterpret_cast<RefClassWrapper<System::Action<IPatternColumn^>> *>(param);
             rebuzzpat->PatternChanged -= tmpact->GetRef();
         }
 
-        static void RemovePropChangeHandler(IPattern^ rebuzzpat, const CPattern* buzzpat, const CPatternData* patdata, void* param)
+        static void RemovePropChangeHandler(uint64_t id, IPattern^ rebuzzpat, CPattern* buzzpat, CPatternData* patdata, void* param)
         {
             RefClassWrapper<PropertyChangedEventHandler>* tmpact = reinterpret_cast<RefClassWrapper<PropertyChangedEventHandler> *>(param);
             rebuzzpat->PropertyChanged -= tmpact->GetRef();
         }
+
 
         PatternManager::~PatternManager()
         {
             Release();
 
             PatternCreateCallbackData* patternCallbackData = reinterpret_cast<PatternCreateCallbackData*>(m_patternCallbackData);
-           
             delete patternCallbackData;
             
+            delete m_eventHandlersAddedToMachines;
+            m_eventHandlersAddedToMachines = NULL;
+
+            delete m_machinesEventHandlersAddedTo;
+            m_machinesEventHandlersAddedTo = NULL;
+
             if (m_lock != NULL)
             {
                 delete m_lock;
@@ -210,6 +226,18 @@ namespace ReBuzz
                 return;
 
             std::lock_guard<std::mutex> lg(*m_lock);
+
+            //Unregister the pattern added events from the machines we added it to
+            if((m_patternAddedAction != nullptr) && (m_machinesEventHandlersAddedTo != NULL))
+            {
+                for (auto & itr : *m_machinesEventHandlersAddedTo)
+                {
+                    itr.GetRef()->PatternAdded -= m_patternAddedAction;
+                }
+
+                delete m_patternAddedAction;
+                m_patternAddedAction = nullptr;
+            }
 
             //Unreigster the action from all patterns
             if (m_onPatternChangeAction != nullptr)
@@ -230,6 +258,7 @@ namespace ReBuzz
                 delete m_onPropChangeEventHandler;
             }
 
+
             if (m_patternMap != NULL)
             {
                 m_patternMap->Release();
@@ -238,10 +267,97 @@ namespace ReBuzz
             }
         }
 
-        void PatternManager::SetExInterface(CMachineInterfaceEx* iface)
+        typedef struct EnumPatternsByMachineData
         {
-            std::lock_guard<std::mutex> lg(*m_lock);
-            m_exInterface = iface;
+            std::vector<uint64_t> ids;
+            std::vector<CPattern*> cpats;
+            std::vector<RefClassWrapper<IPattern>> rebuzzPats;
+            uint64_t rebuzzMachineId;
+        };
+
+        static void RemovePatternsByMachineEnumProc(uint64_t id, IPattern^ pat,  CPattern * buzzPat,  CPatternData* patdata, void* param)
+        {
+            EnumPatternsByMachineData* cbdata = reinterpret_cast<EnumPatternsByMachineData*>(param);
+            
+            //Get the machine id
+            uint64_t machId = Utils::ObjectToInt64(pat->Machine);
+            if (machId == cbdata->rebuzzMachineId)
+            {
+                cbdata->ids.push_back(id);
+                cbdata->rebuzzPats.push_back(pat);
+                cbdata->cpats.push_back(buzzPat);
+            }
+        }
+
+        void PatternManager::RemovePatternsByMachine(IMachine^ rebuzzmac)
+        {
+            EnumPatternsByMachineData enumData;
+            enumData.rebuzzMachineId = Utils::ObjectToInt64(rebuzzmac);
+            {
+                std::lock_guard<std::mutex> lg(*m_lock);
+
+                //Get list of patterns to remove, these are patterns associated with the passed in machine            
+                m_patternMap->ForEachItem(RemovePatternsByMachineEnumProc, &enumData);
+            }
+
+            //Call the remove callbacks, so that things are notified before the pattern info is removed
+            if (m_onPatternRemovedCallback != NULL)
+            {
+                int idx = 0;
+                for (const auto& patid : enumData.ids)
+                {
+                    m_onPatternRemovedCallback(patid, enumData.rebuzzPats[idx].GetRef(), enumData.cpats[idx], PatternEventFlags_All, m_callbackParam);
+                    ++idx;
+                }
+            }
+
+            //Unregister the pattern added event from the machine
+            int64_t machineId = Utils::ObjectToInt64(rebuzzmac);
+            if (m_eventHandlersAddedToMachines->find(machineId) != m_eventHandlersAddedToMachines->end())
+            {
+                //Remove pattern added event handler
+                rebuzzmac->PatternAdded -= m_patternAddedAction;
+
+                //Remove the entries that tell us that a pattern added event has been added.
+                m_eventHandlersAddedToMachines->erase(machineId);
+                for (int x = 0; x < m_machinesEventHandlersAddedTo->size(); ++x)
+                {
+                    if (Utils::ObjectToInt64((*m_machinesEventHandlersAddedTo)[x].GetRef()) == machineId)
+                    {
+                        m_machinesEventHandlersAddedTo->erase(m_machinesEventHandlersAddedTo->begin() + x);
+                        break;
+                    }
+                }
+            }
+
+            //Remove patterns
+            {
+                std::lock_guard<std::mutex> lg(*m_lock);
+
+                PatternCreateCallbackData* createCallbackData = reinterpret_cast<PatternCreateCallbackData*>(m_patternCallbackData);
+                for (const auto& patid : enumData.ids)
+                {
+                    //Unregister event handlers
+                    CPattern* buzzpat = m_patternMap->GetBuzzTypeById(patid);
+                    if (buzzpat != NULL)
+                    {
+                        IPattern^ rebuzzPat = m_patternMap->GetReBuzzTypeByBuzzType(buzzpat);
+                        if (rebuzzPat != nullptr)
+                        {
+                            RefClassWrapper<PropertyChangedEventHandler> tmphdlr(m_onPropChangeEventHandler);
+                            RemovePropChangeHandler(patid, rebuzzPat, buzzpat, (CPatternData*)buzzpat, &tmphdlr);
+
+                            RefClassWrapper<System::Action<IPatternColumn^>> tmphdlr2(m_onPatternChangeAction);
+                            RemovePatChangeAction(patid, rebuzzPat, buzzpat, (CPatternData*)buzzpat, &tmphdlr2);
+                        }
+                    }
+
+                    m_patternMap->RemoveById(patid);
+                }
+
+                //Remove from name map as well
+                createCallbackData->patternNameMap.erase(enumData.rebuzzMachineId);
+            }
         }
 
         CPattern* PatternManager::GetPatternByName(IMachine^ rebuzzmac, const char* name)
@@ -268,6 +384,10 @@ namespace ReBuzz
             }
 
             String^ clrPatName = Utils::stdStringToCLRString(name);
+            bool patternCreated = false;
+            CPattern* retPat = NULL;
+            int64_t patId = 0;
+            IPattern^ patCreated = nullptr;
             try
             {
                 //Machine / Pattern do not exist. 
@@ -275,15 +395,23 @@ namespace ReBuzz
                 {
                     if (clrPatName == pat->Name)
                     {
-                        int64_t patId = Utils::ObjectToInt64(pat);
+                        patId = Utils::ObjectToInt64(pat);
+                        patCreated = pat;
                         patternCallbackData->patternNameMap[cmachineid][name] = patId;
-                        return m_patternMap->GetOrStoreReBuzzTypeById(patId, pat);
+                        retPat =  m_patternMap->GetOrStoreReBuzzTypeById(patId, pat, &patternCreated);
+                        break;
                     }
                 }
             }
             finally
             {
                 delete clrPatName;
+            }
+
+            //If the pattern was created, then call the added callback
+            if ((retPat != NULL) && (m_onPatternAddedCallback != NULL) && (patCreated != nullptr))
+            {
+                m_onPatternAddedCallback(patId, patCreated, retPat, PatternEventFlags_All, m_callbackParam);
             }
 
             return NULL;
@@ -294,57 +422,59 @@ namespace ReBuzz
             if (p == nullptr)
                 return NULL;
 
-            OnNewPatternCallback callback = NULL;
+            OnPatternEventCallback callback = NULL;
             std::vector<CPattern*> callbackPats;
-            std::vector<int> callbackPatLens;
+            std::vector<RefClassWrapper<IPattern>> callbackRebuzzPats;
             void* cbparam = NULL;
             CPattern* cRetPat = NULL;
             CMachineInterfaceEx* exIface = NULL;
+            uint64_t id = Utils::ObjectToInt64(p);
+            bool itemCreated = false;
             {
                 std::lock_guard<std::mutex> lg(*m_lock);
 
                 //Get/Store pattern
-                uint64_t id = Utils::ObjectToInt64(p);
-                cRetPat = m_patternMap->GetOrStoreReBuzzTypeById(id, p);
-                exIface = m_exInterface;
-
+                cRetPat = m_patternMap->GetOrStoreReBuzzTypeById(id, p, &itemCreated);
 
                 //Set up for calling any deferred callbacks outside the lock
                 //The callback list gets populated when  GetOrStoreReBuzzTypeById() is called (above)
                 PatternCreateCallbackData* patternCallbackData = reinterpret_cast<PatternCreateCallbackData*>(m_patternCallbackData);
                 if (patternCallbackData != NULL)
                 {   
-                    for (const auto& p : patternCallbackData->callbacksRequired)
+                    for (const auto& cbp : patternCallbackData->callbacksRequired)
                     {
-                        CPatternData* data = m_patternMap->GetBuzzEmulationType(p);
-                        if (data != NULL)
+                        IPattern^ rebuzzP = m_patternMap->GetReBuzzTypeByBuzzType(cbp);
+                        if (rebuzzP != nullptr)
                         {
-                            callbackPats.push_back(p);
-                            callbackPatLens.push_back(data->length);
+                            callbackRebuzzPats.push_back(rebuzzP);
+                            callbackPats.push_back(cbp);
                         }
                     }
 
                     patternCallbackData->callbacksRequired.clear();
 
-                    callback = m_onNewPatternCallback;
+                    callback = m_onPatternAddedCallback;
                     cbparam = m_callbackParam;
+                }
+
+                //Call the callbacks for this pattern if created
+                if (itemCreated)
+                {
+                    callbackRebuzzPats.push_back(p);
+                    callbackPats.push_back(cRetPat);
                 }
             }
 
             //Call the callbacks, if required, outside of the lock
-            int idx = 0;
-            for (const auto& cb : callbackPats)
+            if (callback != NULL)
             {
-                if(callback != NULL)
-                    callback(cb, cbparam);
-
-                //Notify the machine
-                if (exIface != NULL)
-                {   
-                    exIface->CreatePattern(cb, callbackPatLens[idx]);
+                int idx = 0;
+                for (const auto& cb : callbackPats)
+                {
+                    IPattern^ cbpat = callbackRebuzzPats[idx].GetRef();
+                    callback(id, cbpat, cb, PatternEventFlags_All, cbparam);
+                    ++idx;
                 }
-
-                ++idx;
             }
             
 
@@ -397,18 +527,30 @@ namespace ReBuzz
                 hasChanged = true;
             }
 
+            //Notify rebuzz that patten has changed.
+            //This should trigger the 'OnReBuzzPatternChange' event to fire via ReBuzz
             if(hasChanged)
                 rebuzzPat->NotifyPatternChanged();
         }
 
         void PatternManager::ScanMachineForPatterns(IMachine^ mach)
         {
-            std::lock_guard<std::mutex> lg(*m_lock);
-
             for each (IPattern^ p in mach->Patterns )
             {
-                int64_t patid = Utils::ObjectToInt64(p);
-                GetOrStorePattern(p);
+                GetOrStorePattern(p); //This uses the lock, and calls the callbacks if required
+            }
+        }
+
+        void PatternManager::AddEventHandlersToMachine(IMachine^ mach)
+        {
+            std::lock_guard<std::mutex> lg(*m_lock);
+            int64_t machid = Utils::ObjectToInt64(mach);
+            if (m_eventHandlersAddedToMachines->find(machid) == m_eventHandlersAddedToMachines->end())
+            {
+                mach->PatternAdded += m_patternAddedAction;
+
+                m_eventHandlersAddedToMachines->insert(machid);
+                m_machinesEventHandlersAddedTo->push_back(mach);
             }
         }
     }

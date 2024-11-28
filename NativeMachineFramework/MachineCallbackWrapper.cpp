@@ -58,7 +58,6 @@ namespace ReBuzz
             if (!m_addedMachineEventHandler.isNull())
             {
                 MachineEventWrapper^ evtWrapper = m_addedMachineEventHandler.GetRef();
-                Global::Buzz->Song->MachineAdded -= evtWrapper->GetAction();
                 delete evtWrapper;
                 m_addedMachineEventHandler.Free();
             }
@@ -66,11 +65,27 @@ namespace ReBuzz
             if (!m_deleteMachineEventHandler.isNull())
             {
                 MachineEventWrapper^ evtWrapper = m_deleteMachineEventHandler.GetRef();
-                Global::Buzz->Song->MachineRemoved -= evtWrapper->GetAction();
                 delete evtWrapper;
                 m_deleteMachineEventHandler.Free();
             }
         }
+
+        void MachineCallbackWrapper::OnMachineAdded(IMachine^ mach)
+        {
+            if (!m_addedMachineEventHandler.isNull())
+            {
+                m_addedMachineEventHandler.GetRef()->OnEvent(mach);
+            }
+        }
+        
+        void MachineCallbackWrapper::OnMachineRemoved(IMachine^ mach)
+        {
+            if (!m_deleteMachineEventHandler.isNull())
+            {
+                m_deleteMachineEventHandler.GetRef()->OnEvent(mach);
+            }
+        }
+
 
         int MachineCallbackWrapper::GetHostVersion()
         {
@@ -113,32 +128,24 @@ namespace ReBuzz
             switch (et)
             {
                 case gAddMachine:
-                    //Ask ReBuzz to call us back if a machine is added to the song
+                    //Set up event handler
+                    //The MachineManager will call MachineWrapper, which will call our OnMachineAdded method, 
+                    //which will call the OnEvent of this event handler class
                     if (m_addedMachineEventHandler.isNull())
                     {
                         m_addedMachineEventHandler = gcnew MachineEventWrapper(m_machineMgr.GetRef(), m_machinehost.GetRef()->Machine, m_interface);
-
-                        //Tell ReBuzz to call the event handler on event, which will call all the registered callbacks
-                        MachineEventWrapper^ eventHandler = m_addedMachineEventHandler.GetRef();
-                        System::Action<IMachine^>^ action = gcnew System::Action<IMachine^>(eventHandler, &MachineEventWrapper::OnEvent);
-                        eventHandler->SetAction(action);
-                        Global::Buzz->Song->MachineAdded += action;
                     }
 
                     //Add callback and param to event handler
                     m_addedMachineEventHandler.GetRef()->AddEvent(p, param);
                     break;
                 case gDeleteMachine:
-                    //Ask ReBuzz to call us back if a machine is added to the song
+                    //Set up event handler
+                    //The MachineManager will call MachineWrapper, which will call our OnMachineRemoved method, 
+                    //which will call the OnEvent of this event handler class
                     if (m_deleteMachineEventHandler.isNull())
                     {
                         m_deleteMachineEventHandler = gcnew MachineEventWrapper(m_machineMgr.GetRef(), m_machinehost.GetRef()->Machine, m_interface);
-
-                        //Tell ReBuzz to call our method on event, which will call all the registered callbacks
-                        MachineEventWrapper^ eventHandler = m_deleteMachineEventHandler.GetRef();
-                        System::Action<IMachine^>^ action = gcnew System::Action<IMachine^>(eventHandler, &MachineEventWrapper::OnEvent);
-                        eventHandler->SetAction(action);
-                        Global::Buzz->Song->MachineRemoved += action;
                     }
 
                     //Add callback and param to event handler

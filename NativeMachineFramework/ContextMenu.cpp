@@ -64,7 +64,7 @@ namespace ReBuzz
         ContextMenu::ContextMenu()
         {
             m_menu = gcnew ContextMenuStrip();
-            m_menuItems = new std::vector<std::shared_ptr<RefClassWrapper<MenuItem>>>();
+            m_menuItems = new std::vector<RefClassWrapper<MenuItem>>();
             m_closeHandler = gcnew ToolStripDropDownClosedEventHandler(this, &ContextMenu::OnMenuClose);
             m_menu->Closed += m_closeHandler;
 
@@ -78,10 +78,10 @@ namespace ReBuzz
 
             if (m_menuItems != nullptr)
             {
-                for (const auto& itr : *m_menuItems)
+                for (auto& itr : *m_menuItems)
                 {
-                    delete itr->GetRef();
-                    itr->Free();
+                    delete itr.GetRef();
+                    itr.Free();
                 }
             }
 
@@ -98,7 +98,7 @@ namespace ReBuzz
         {
             for (const auto& itr : *m_menuItems)
             {
-                itr->GetRef()->CleanUp();
+                itr.GetRef()->CleanUp();
             }
         }
 
@@ -111,18 +111,16 @@ namespace ReBuzz
         {
             for (const auto& itr : *m_menuItems)
             {
-                if (itr->GetRef()->GetId() == (int)args->ClickedItem->Tag)
+                if (itr.GetRef()->GetId() == (int)args->ClickedItem->Tag)
                 {
-                    itr->GetRef()->OnMenuItemClick();
+                    itr.GetRef()->OnMenuItemClick();
                 }
             }
         }
 
         void ContextMenu::AddMenuItem(int id, const char * text, OnMenuItemClickCallback clickCallback, void* callbackParam)
         {
-            m_menuItems->push_back(std::shared_ptr<RefClassWrapper<MenuItem>>());
-            (*m_menuItems)[m_menuItems->size() - 1].reset(new RefClassWrapper<MenuItem>());
-            (*m_menuItems)[m_menuItems->size() - 1]->Assign(gcnew MenuItem(id, text, clickCallback, callbackParam));      
+            m_menuItems->push_back(gcnew MenuItem(id, text, clickCallback, callbackParam));
         }
 
         void ContextMenu::ShowAtCursor()
@@ -130,7 +128,7 @@ namespace ReBuzz
             //Build menu items and add to the menu items list
             for (const auto& itr : *m_menuItems)
             {
-                itr->GetRef()->Build(m_menu); //This adds to m_menu.Items
+                itr.GetRef()->Build(m_menu); //This adds to m_menu.Items
             }
 
             m_menu->Show(System::Windows::Forms::Cursor::Position.X, System::Windows::Forms::Cursor::Position.Y);

@@ -21,14 +21,43 @@ namespace ReBuzz
                 assign(ref);
             }
 
+            inline RefClassWrapper(const RefClassWrapper<T> & ref)  : m_classrefPtr(nullptr)
+            {
+                assign(ref.GetRef());
+            }
+
             virtual ~RefClassWrapper()
             {
                 Free();
             }
 
+            inline RefClassWrapper& operator = (const RefClassWrapper<T> & x)
+            {
+                void* oldref = m_classrefPtr;
+
+                if (!x.isNull())
+                {
+                    GCHandle handle = GCHandle::Alloc(x.GetRef());
+                    m_classrefPtr = GCHandle::ToIntPtr(handle).ToPointer();
+                }
+                else
+                {
+                    m_classrefPtr = nullptr;
+                }
+
+                if (oldref != NULL)
+                {
+                    GCHandle handle = GCHandle::FromIntPtr(IntPtr(oldref));
+                    handle.Free();
+                }
+
+                return *this;
+            }
+
             inline RefClassWrapper& operator = (T^ x)
             {
-                Assign(x);
+                Free();
+                assign(x);
                 return *this;
             }
 
@@ -55,7 +84,7 @@ namespace ReBuzz
             }
 
 
-            inline T^ GetRef()
+            inline T^ GetRef() const
             {
                 if (m_classrefPtr == nullptr)
                     return nullptr;

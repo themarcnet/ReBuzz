@@ -23,18 +23,13 @@ namespace ReBuzz
 
             void AddEvent(EVENT_HANDLER_PTR p, void* param);
 
-            void SetAction(System::Action<IMachine^>^ action);
-
-            System::Action<IMachine^>^ GetAction();
-
         private:
 
-            MachineManager^ m_machmgr;
             std::vector<EVENT_HANDLER_PTR>* m_callbacks;
             std::vector<void*>* m_callbackParams;
-            System::Action<IMachine^>^ m_action;
             CMachineInterface* m_machineInterface;
             int64_t m_selfId;
+            MachineManager^ m_machmgr;
         };
     }
 }

@@ -4,6 +4,8 @@
 #include <memory>
 #include <vector>
 
+#include <stdio.h>
+
 namespace ReBuzz
 {
     namespace NativeMachineFramework
@@ -19,9 +21,16 @@ namespace ReBuzz
 
         struct CMachineData
         {
+            CMachineData()
+            {
+                sprintf_s(m_sig, "CMachineData");
+            }
+
+
             //This is dummy data that we return to the machine as CMachine *
             //The machine is not supposed to know what this data is, or what the values represent,
             //just that the address is a unique identifier for a specific machine.
+            char m_sig[32];
             unsigned char m_machineBytes[32];
             CMachineInfo m_info;
 
@@ -44,9 +53,15 @@ namespace ReBuzz
 
         struct CPatternData
         {
+            CPatternData()
+            {
+                sprintf_s(s_sig, "CPatternData");
+            }
+
             //This is also dummy data.
             //The assumption is that the pattern machine does not care what the content
             //of a CPattern is, only that it is unique for the pattern data.
+            char s_sig[32];
             unsigned char m_machineBytes[32];
             std::string name; //Storage for the pattern name
             int length;
@@ -54,6 +69,13 @@ namespace ReBuzz
 
         struct CWaveLevelData
         {
+            CWaveLevelData()
+            {
+                sprintf_s(m_sig, "CWaveLevelData");
+            }
+
+
+            char m_sig[32];
             std::vector<short> samples;
         };
     }

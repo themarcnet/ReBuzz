@@ -10,12 +10,10 @@ namespace ReBuzz
 
     namespace NativeMachineFramework
     {
-
-        MachineEventWrapper::MachineEventWrapper(MachineManager^ machmgr, 
+        MachineEventWrapper::MachineEventWrapper(MachineManager^ mgr,
                                                  IMachine^ self,
-                                                 CMachineInterface* machineIface) : m_machmgr(machmgr),
-                                                                                    m_machineInterface(machineIface),
-                                                                                    m_action(nullptr)
+                                                 CMachineInterface* machineIface) : m_machineInterface(machineIface),
+                                                                                    m_machmgr(mgr)
         {
             m_callbacks = new std::vector<EVENT_HANDLER_PTR>();
             m_callbackParams = new std::vector<void*>();
@@ -38,8 +36,10 @@ namespace ReBuzz
             if (machineId == m_selfId)
                 return;
 
-            //Get the native machine
-            CMachine* nativeMachine = m_machmgr->GetOrStoreMachine(machine);
+            //Get the native machine. 
+            //Don't call the 'OrStore' method here, since this may be a delete event
+            //and we don't want to re-add the machine if it has already been deleted.
+            CMachine* nativeMachine = m_machmgr->GetBuzzMachine(machine);
             if (nativeMachine == NULL)
                 return;
 
@@ -56,16 +56,6 @@ namespace ReBuzz
         {
             m_callbacks->push_back(p);
             m_callbackParams->push_back(param);
-        }
-
-        void MachineEventWrapper::SetAction(System::Action<IMachine^>^ action)
-        {
-            m_action = action;
-        }
-
-        System::Action<IMachine^>^ MachineEventWrapper::GetAction()
-        {
-            return m_action;
         }
     }
 }

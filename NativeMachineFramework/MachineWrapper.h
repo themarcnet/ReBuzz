@@ -133,8 +133,7 @@ namespace ReBuzz
             
             void OnSequenceCreatedByReBuzz(int seq);
             void OnSequecneRemovedByReBuzz(int seq);
-            void OnMachineCreatedByReBuzz(IMachine^ machine);
-
+            
             void OnKeyDown(Object^ sender, KeyEventArgs^ args);
             void OnKeyUp(Object^ sender, KeyEventArgs^ args);
 
@@ -157,7 +156,7 @@ namespace ReBuzz
             CMasterInfo* m_masterInfo;
             void* m_mapCallbackData;
             IMachine^ m_rebuzzMachine;
-
+            void* m_internalCallbackData;
            
             CPattern * m_patternEditorPattern;
             CMachine* m_patternEditorMachine;
@@ -174,8 +173,6 @@ namespace ReBuzz
             KeyEventHandler^ m_onKeyupHandler;
             std::unordered_map<UINT, OnWindowsMessage> * m_editorMessageMap;
             std::unordered_map<UINT, void *> * m_editorMessageParamMap;
-
-            System::Action<IMachine^>^ m_machineAddedAction;
         };
     }
 }

@@ -76,7 +76,7 @@ namespace ReBuzz
             ContextMenuStrip^ m_menu;
             ToolStripDropDownClosedEventHandler^ m_closeHandler;
             ToolStripItemClickedEventHandler^ m_clickHandler;
-            std::vector<std::shared_ptr< RefClassWrapper<MenuItem>>> * m_menuItems;
+            std::vector<RefClassWrapper<MenuItem>> * m_menuItems;
         };
     }
 }

@@ -3,6 +3,7 @@
 #include "Utils.h"
 
 #include <map>
+#include <sstream>
 
 using BuzzGUI::Interfaces::MachineType;
 using BuzzGUI::Interfaces::MachineInfoFlags;
@@ -41,6 +42,8 @@ namespace ReBuzz
             IMachine^ rebuzzMach = machCallbackData->machineMap->GetReBuzzTypeByBuzzType(buzzMach);
             if (rebuzzMach == nullptr)
                 return;
+
+
 
             //Get the emulation type, as this contains info about the machine
             CMachineData* machdata = machCallbackData->machineMap->GetBuzzEmulationType(buzzMach);
@@ -267,16 +270,23 @@ namespace ReBuzz
 
         //===============================================================================================
 
-        MachineManager::MachineManager()
+        MachineManager::MachineManager(OnMachineEventCallback onMachineAddedCallback,
+                                        OnMachineEventCallback onMachineRemovedCallback,
+                                        void* callbackParam)
         {
             m_lock = new std::mutex();
             MachineCreateCallbackData* machCallbackData = new MachineCreateCallbackData();
             m_machineCallbackData = machCallbackData;
             m_machineMap = new RebuzzBuzzLookup< IMachine, CMachineData, CMachine>(CreateMachineCallback, m_machineCallbackData);
             
+            //Store callback info for MachineWrapper
+            m_onMachineAddedCallback = onMachineAddedCallback;
+            m_onMachineRemovedCallback = onMachineRemovedCallback;
+            m_onMachineEventCallbackParam = callbackParam;
+
             //Set up callback data
             machCallbackData->machineMap = m_machineMap;
-
+          
             //Ask ReBuzz to tell us when a machine has been added
             m_machineAddedAction = gcnew System::Action<IMachine^>(this, &MachineManager::OnMachineCreatedByReBuzz);
             Global::Buzz->Song->MachineAdded += m_machineAddedAction;
@@ -301,6 +311,7 @@ namespace ReBuzz
             }
         }
 
+        
         void MachineManager::Release()
         {
             if (m_lock == NULL)
@@ -324,7 +335,7 @@ namespace ReBuzz
             }
 
             if (m_machineMap != NULL)
-            {
+            {  
                 m_machineMap->Release();
                 delete m_machineMap;
                 m_machineMap = NULL;
@@ -356,73 +367,152 @@ namespace ReBuzz
             if (m == nullptr)
                 return NULL;
 
+            int64_t machid = 0;
+            CMachine* pmach = NULL;
+            bool itemCreated = false;
+            {
+                std::lock_guard<std::mutex> lg(*m_lock);
+
+                machid = Utils::ObjectToInt64(m);
+                pmach = m_machineMap->GetOrStoreReBuzzTypeById(machid, m, &itemCreated);
+            }
+
+            //If an item was created in the map, then call the machine added callback
+            if (itemCreated && (m_onMachineAddedCallback != NULL))
+            {
+                m_onMachineAddedCallback(machid, m, pmach, m_onMachineEventCallbackParam);
+            }
+
+            return pmach;
+        }
+
+        CMachine* MachineManager::GetBuzzMachine(IMachine^ m)
+        {
             std::lock_guard<std::mutex> lg(*m_lock);
 
-            int64_t machid = Utils::ObjectToInt64(m);   
-            return m_machineMap->GetOrStoreReBuzzTypeById(machid, m);
+            int64_t machid = Utils::ObjectToInt64(m);
+            return m_machineMap->GetBuzzTypeById(machid);
         }
 
         CMachine* MachineManager::GetCMachineByName(const char* name)
         {
-            std::lock_guard<std::mutex> lg(*m_lock);
-
-            //Names are stored in callback data
-            MachineCreateCallbackData* machCallbackData = reinterpret_cast<MachineCreateCallbackData*>(m_machineCallbackData);
-            const auto& found = machCallbackData->machineNameMap.find(name);
-            if (found == machCallbackData->machineNameMap.end())
+            bool itemCreated = false;
+            CMachine* ret = NULL;
+            IMachine^ rebuzzMachine = nullptr;
+            int64_t machid;
             {
-                //We don't have this machine, but does ReBuzz?
-                //Convert the char * to a CLR string
-                String^ clrName = Utils::stdStringToCLRString(name);
-                CMachine* ret = NULL;
-                try
+
+                std::lock_guard<std::mutex> lg(*m_lock);
+
+                //Names are stored in callback data
+                MachineCreateCallbackData* machCallbackData = reinterpret_cast<MachineCreateCallbackData*>(m_machineCallbackData);
+                const auto& found = machCallbackData->machineNameMap.find(name);
+                if (found == machCallbackData->machineNameMap.end())
                 {
-                    for each (IMachine ^ mach in Global::Buzz->Song->Machines)
+                    //We don't have this machine, but does ReBuzz?
+                    //Convert the char * to a CLR string
+                    String^ clrName = Utils::stdStringToCLRString(name);
+
+                    try
                     {
-                        if (mach->Name == clrName)
+                        for each (IMachine ^ mach in Global::Buzz->Song->Machines)
                         {
-                            //Found - create entry in our map
-                            int64_t id = Utils::ObjectToInt64(mach);
-                            ret = machCallbackData->machineMap->GetOrStoreReBuzzTypeById(id, mach);
-                            machCallbackData->machineNameMap[name] = id;
-                            break;
+                            if (mach->Name == clrName)
+                            {
+                                //Found - create entry in our map
+                                machid = Utils::ObjectToInt64(mach);
+                                rebuzzMachine = mach;
+                                ret = machCallbackData->machineMap->GetOrStoreReBuzzTypeById(machid, mach, &itemCreated);
+                                machCallbackData->machineNameMap[name] = machid;
+                                break;
+                            }
                         }
                     }
+                    finally
+                    {
+                        delete clrName;
+                    }
                 }
-                finally
-                {
-                    delete clrName;
+
+                if (ret == NULL)
+                {   
+                    machid = (*found).second;
+                    ret = m_machineMap->GetBuzzTypeById((*found).second);
+                    rebuzzMachine = m_machineMap->GetReBuzzTypeByBuzzType(ret);
                 }
-                
-                return ret;
             }
 
-            return m_machineMap->GetBuzzTypeById((*found).second);
+            if (itemCreated && (m_onMachineAddedCallback != NULL))
+            {
+                m_onMachineAddedCallback(machid, rebuzzMachine, ret, m_onMachineEventCallbackParam);
+            }
+
+            return ret;
         }
 
         void MachineManager::OnMachineCreatedByReBuzz(IMachine^ machine)
         {
+            bool itemCreated = false;
+            int64_t id;
+            CMachine* pmach;
             {
                 std::lock_guard<std::mutex> lg(*m_lock);
 
                 //Do we have this machine in our map?
-                int64_t id = Utils::ObjectToInt64(machine);
-                CMachine* pmach = m_machineMap->GetBuzzTypeById(id);
+                id = Utils::ObjectToInt64(machine);
+                pmach = m_machineMap->GetBuzzTypeById(id);
                 if (pmach == NULL)
                 {
                     //Create machine. This will also trigger the above 'CreateMachineCallback'
-                    m_machineMap->GetOrStoreReBuzzTypeById(id, machine);
+                    m_machineMap->GetOrStoreReBuzzTypeById(id, machine, &itemCreated);
                 }
+            }
+
+            //If an item was created in the map, then call the machine added callback
+            if (itemCreated && (m_onMachineAddedCallback != NULL))
+            {
+                m_onMachineAddedCallback(id, machine, pmach, m_onMachineEventCallbackParam);
             }
         }
 
         void MachineManager::OnMachineRemovedByReBuzz(IMachine^ machine)
         {
+            //Call the removed callback first
+            if (m_onMachineRemovedCallback != NULL)
+            {
+                int64_t id = Utils::ObjectToInt64(machine);
+                CMachine* buzzMachine = NULL;
+                {
+                    std::lock_guard<std::mutex> lg(*m_lock);
+                    buzzMachine = m_machineMap->GetBuzzTypeById(id);
+                }
+
+                if(buzzMachine != NULL)
+                    m_onMachineRemovedCallback(id, machine, buzzMachine, m_onMachineEventCallbackParam);
+            }
+
             std::lock_guard<std::mutex> lg(*m_lock);
 
-            //TODO
+            //Remove from machine manager
+            int64_t id = Utils::ObjectToInt64(machine);
+            if (m_machineMap != NULL)
+                m_machineMap->RemoveById(id);
+            
+            //Remove from name map
+            MachineCreateCallbackData* cbdata = reinterpret_cast<MachineCreateCallbackData*>(m_machineCallbackData);
+            std::vector<std::string> removeNames;
+            for (const auto& itr : cbdata->machineNameMap)
+            {
+                if (itr.second == id)
+                {
+                    removeNames.push_back(itr.first);
+                }
+            }
+
+            for (const auto& nameitr : removeNames)
+            {
+                cbdata->machineNameMap.erase(nameitr);
+            }
         }
-
-
     }
 }
