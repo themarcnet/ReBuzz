@@ -210,7 +210,7 @@ namespace ReBuzz.ManagedMachine
             MidiControlChangeFunction = (MidiControlChangeDelegate)GetMethod(typeof(MidiControlChangeDelegate), "MidiControlChange");
             GetLatencyFunction = (GetLatencyDelegate)GetMethod(typeof(GetLatencyDelegate), "GetLatency");
 
-            //Take into consideration that some machines may want to return System.Windows.Forms.UserControl.
+            //Take into consideration that some more native machines may want to return System.Windows.Forms.UserControl.
             //In this situation, we can use NativeMachineFrameworkUI to wrap around the System.Windows.Forms.UserControl
             try
             {

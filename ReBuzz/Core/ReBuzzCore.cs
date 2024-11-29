@@ -1775,7 +1775,7 @@ namespace ReBuzz.Core
                 byte[] data = null;
                 var currentEditorMachine = machine.EditorMachine;
                 // Change it
-                if (Gear.HasSameDataFormat(machine.EditorMachine.DLL.Name, editorMachine.Name))
+                if (Gear.HasSameDataFormat(machine.EditorMachine.DLL.Info.Name, editorMachine.Info.Name))
                     data = machine.EditorMachine.Data;
 
                 lock (ReBuzzCore.AudioLock)
