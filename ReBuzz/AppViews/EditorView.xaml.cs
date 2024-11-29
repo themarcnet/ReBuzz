@@ -3,7 +3,8 @@ using BuzzGUI.Common.Templates;
 using BuzzGUI.Interfaces;
 using BuzzGUI.SequenceEditor;
 using ReBuzz.Core;
-using System.Collections.Generic;
+
+using System.Collections.Generic
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -151,9 +152,16 @@ namespace ReBuzz
             foreach (var machine in Global.Buzz.MachineDLLs.Values)
             {
                 if (machine.Info != null && (machine.Info.Flags & MachineInfoFlags.PATTERN_EDITOR) == MachineInfoFlags.PATTERN_EDITOR)
-                    EditorMachines.Add(machine);
+                {
+                    //Check that Gear has the pattern editor machine, since selecting a pattern editor will use Gear
+                    //to check and transfer data between the previous editor and the newly selected one.
+                    if(ReBuzz.Gear.Machine.Where(x => x.Name == machine.Info.Name).Count() > 0)
+                        EditorMachines.Add(machine);
+                }
             }
+			
             EditorMachine = EditorMachines.FirstOrDefault();
+
             PropertyChanged.Raise(this, "EditorMachine");
             PropertyChanged.Raise(this, "EditorMachines");
 
