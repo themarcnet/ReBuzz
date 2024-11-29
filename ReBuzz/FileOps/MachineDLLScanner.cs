@@ -46,6 +46,11 @@ namespace ReBuzz.FileOps
                             xmlMachines = RescanMachineDLLs(buzz);
                         }
                     }
+                    else
+                    {
+                        //No XML machines available - force scan
+                        xmlMachines = RescanMachineDLLs(buzz);
+                    }
                 }
             }
             catch (Exception e)
