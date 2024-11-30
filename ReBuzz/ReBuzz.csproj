@@ -24,7 +24,7 @@
     <Platforms>AnyCPU;x64</Platforms>
     <UseWindowsThreadPool>true</UseWindowsThreadPool>
     <CETCompat>false</CETCompat>
-    <IntermediateOutputPath>$(SolutionDir)build\$(Configuration)\serilog\obj</IntermediateOutputPath>
+    <IntermediateOutputPath>$(SolutionDir)build\$(Configuration)\Rebuzz\obj</IntermediateOutputPath>
   </PropertyGroup>
   
   
@@ -162,4 +162,12 @@
 	<PackageReference Include="System.Drawing.Common" Version="9.0.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.0" />
   </ItemGroup>
+  
+  <Target Name="ForcePerformRestore" AfterTargets="BeforeBuild">	
+    <Exec Command="IF NOT EXIST  &quot;$(IntermediateOutputPath)..\project.assets.json&quot;  echo restore to $(IntermediateOutputPath)..\project.assets.json &amp;&amp;  dotnet restore &quot;$(ProjectName).csproj&quot; &amp;&amp; move &quot;build\$(ProjectName)\obj\*&quot; &quot;$(IntermediateOutputPath)..\&quot; &amp;&amp; rmdir /Q /S build	 " /> 
+  </Target>
+  
+  <Target Name="RemoveEmptyObj" AfterTargets="AfterBuild">
+    <Exec Command="IF EXIST obj rmdir obj" />
+  </Target>
 </Project>
