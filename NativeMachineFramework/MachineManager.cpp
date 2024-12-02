@@ -27,7 +27,9 @@ namespace ReBuzz
         };
 
         //This callback is called when a new CMachine * map entry is created.
-        //The purpose of this is to populate the machine info, so that the 
+        //The purpose of this is to populate the machine info, so that the native buzz machine can query
+        //information about CMachine * without the need to convert from .NET types to c++ types each
+        //and every time.
         static void CreateMachineCallback(void* mach, void* param)
         {
             //Don't lock - this is callback is only triggered by adding to m_machineMap, 
@@ -43,8 +45,6 @@ namespace ReBuzz
             if (rebuzzMach == nullptr)
                 return;
 
-
-
             //Get the emulation type, as this contains info about the machine
             CMachineData* machdata = machCallbackData->machineMap->GetBuzzEmulationType(buzzMach);
             if (machdata == NULL)
@@ -53,7 +53,7 @@ namespace ReBuzz
             //Use ReBuzz to get info about the machine, and populate the CMachineInfo
             Utils::CLRStringToStdString(rebuzzMach->DLL->Info->Author, machdata->author);
             machdata->m_info.Author = machdata->author.c_str();
-            Utils::CLRStringToStdString(rebuzzMach->DLL->Info->Name, machdata->name);
+            Utils::CLRStringToStdString(rebuzzMach->Name, machdata->name);
             machdata->m_info.Name = machdata->name.c_str();
             Utils::CLRStringToStdString(rebuzzMach->DLL->Info->ShortName, machdata->shortname);
             machdata->m_info.ShortName = machdata->shortname.c_str();

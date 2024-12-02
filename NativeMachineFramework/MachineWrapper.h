@@ -26,7 +26,8 @@ namespace ReBuzz
 {
     namespace NativeMachineFramework
     {
-        typedef OnNewBuzzLookupItemCallback OnNewPatternCallback;
+        //Return false to NOT call 'cbdata->exiface->CreatePattern'
+        typedef bool (*OnNewPatternCallback)(void * buzzpat, const char* patname, void * calbackParam) ;
 
         typedef void* (*KeyboardFocusWindowHandleCallback)(void* param);
 
@@ -45,7 +46,8 @@ namespace ReBuzz
                             void * callbackparam,
                             OnPatternEditorCreateCallback editorCreateCallback,
                             KeyboardFocusWindowHandleCallback kbcallback,
-                            OnPatternEditorRedrawCallback redrawcallback);
+                            OnPatternEditorRedrawCallback redrawcallback, 
+                            OnNewPatternCallback newPatternCallback);
 
             //Destructor - called when Dispose() is called (and we need to be IDisposable)
             ~MachineWrapper();
@@ -168,7 +170,7 @@ namespace ReBuzz
 
             OnPatternEditorCreateCallback m_editorCreateCallback;
             KeyboardFocusWindowHandleCallback m_kbFocusWndcallback;
-            void* m_kbFocusCallbackParam;
+            void* m_externalCallbackParam;
             KeyEventHandler^ m_onKeyDownHandler;
             KeyEventHandler^ m_onKeyupHandler;
             std::unordered_map<UINT, OnWindowsMessage> * m_editorMessageMap;

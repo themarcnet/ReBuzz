@@ -32,7 +32,8 @@ namespace ReBuzz
             MachineCallbackWrapper* callbacks;
             OnPatternEditorRedrawCallback redrawcallback;
             CMachineInterfaceEx* exiface;
-            void* redrawCBParam;
+            OnNewPatternCallback onNewPatternCallback;
+            void* cBParam;
         };
 
         //static LRESULT CALLBACK OverriddenWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -110,8 +111,17 @@ namespace ReBuzz
         {
             MachineWrapperCallbackData* cbdata = reinterpret_cast<MachineWrapperCallbackData*>(param);
 
+            //Notify the external callback
+            bool callCreatePattern = true;
+            if (cbdata->onNewPatternCallback != NULL)
+            {
+                std::string patname;
+                Utils::CLRStringToStdString(rebuzzPat->Name, patname);
+                callCreatePattern = cbdata->onNewPatternCallback(buzzPat, patname.c_str(), cbdata->cBParam);
+            }
+
             //Notify the machine EX interface
-            if (cbdata->exiface != NULL)
+            if((cbdata->exiface != NULL) && callCreatePattern)
             {
                 cbdata->exiface->CreatePattern(buzzPat, rebuzzPat->Length);
             }
@@ -142,7 +152,7 @@ namespace ReBuzz
             //Call the redraw callback
             if (cbdata->redrawcallback != NULL)
             {
-                cbdata->redrawcallback(cbdata->redrawCBParam);
+                cbdata->redrawcallback(cbdata->cBParam);
             }
         }
 
@@ -191,7 +201,8 @@ namespace ReBuzz
                                         void* callbackparam,
                                         OnPatternEditorCreateCallback editorCreateCallback,
                                         KeyboardFocusWindowHandleCallback kbcallback,
-                                        OnPatternEditorRedrawCallback redrawcallback) : 
+                                        OnPatternEditorRedrawCallback redrawcallback,
+                                        OnNewPatternCallback newPatternCallback) :
                                                                      m_thisref(new RefClassWrapper<MachineWrapper>(this)),
                                                                      m_machine((CMachineInterface *)machine),
                                                                      m_thisCMachine(NULL),
@@ -204,7 +215,7 @@ namespace ReBuzz
                                                                      m_control(nullptr),
                                                                      m_editorCreateCallback(editorCreateCallback),
                                                                      m_kbFocusWndcallback(kbcallback),
-                                                                     m_kbFocusCallbackParam(callbackparam),
+                                                                     m_externalCallbackParam(callbackparam),
                                                                      m_onKeyDownHandler(nullptr),
                                                                      m_onKeyupHandler(nullptr),
                                                                      m_editorMessageMap(new std::unordered_map<UINT, OnWindowsMessage>()),
@@ -216,7 +227,8 @@ namespace ReBuzz
             internalCallbackData->callbacks = NULL;
             internalCallbackData->redrawcallback = redrawcallback;
             internalCallbackData->exiface = NULL;
-            internalCallbackData->redrawCBParam = callbackparam;
+            internalCallbackData->cBParam = callbackparam;
+            internalCallbackData->onNewPatternCallback = newPatternCallback;
 
             //Create machine manager
             m_machineMgr = gcnew MachineManager(OnMachineAdded, OnMachineRemoved, m_internalCallbackData);
@@ -391,11 +403,11 @@ namespace ReBuzz
             //Make sure we're initialised
             Init();
 
-            //Store pattern ref (if not already stored)
-            CPattern * pat = m_patternMgr->GetOrStorePattern(pattern);
-
             //Store the machine ref (if not already stored)
             CMachine* patMach = m_machineMgr->GetOrStoreMachine(pattern->Machine);
+
+            //Store pattern ref (if not already stored)
+            CPattern* pat = m_patternMgr->GetOrStorePattern(pattern);
 
             //Get ex interface
             CMachineInterfaceEx* exInterface = m_callbackWrapper->GetExInterface();
@@ -428,7 +440,7 @@ namespace ReBuzz
             HWND hwndSendMsg = m_hwndEditor;
             if (m_kbFocusWndcallback != NULL)
             {
-                HWND hwnd = (HWND)m_kbFocusWndcallback(m_kbFocusCallbackParam);
+                HWND hwnd = (HWND)m_kbFocusWndcallback(m_externalCallbackParam);
                 if (hwnd != NULL)
                     hwndSendMsg = hwnd;
             }
@@ -477,8 +489,10 @@ namespace ReBuzz
                 (classRef->GetRef()->m_patternEditorMachine != NULL) && 
                 (classRef->GetRef()->m_patternEditorPattern != NULL))
             {
+                
                 exInterface->SetPatternTargetMachine(classRef->GetRef()->m_patternEditorPattern, 
                                                      classRef->GetRef()->m_patternEditorMachine);
+                
                 exInterface->SetEditorPattern(classRef->GetRef()->m_patternEditorPattern);
 
                 classRef->GetRef()->m_patternEditorPattern = NULL;
@@ -494,7 +508,7 @@ namespace ReBuzz
 
             //Tell the caller that the control has now been created and set up
             if(classRef->GetRef()->m_editorCreateCallback != NULL)
-                classRef->GetRef()->m_editorCreateCallback(classRef->GetRef()->m_kbFocusCallbackParam);
+                classRef->GetRef()->m_editorCreateCallback(classRef->GetRef()->m_externalCallbackParam);
 
             return IntPtr(patternEditorHwnd);
         }

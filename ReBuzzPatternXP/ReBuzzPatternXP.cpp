@@ -64,6 +64,50 @@ static void RedrawEditorWindow(void* param)
     pmi->patEd->RedrawWindow();
 }
 
+static bool PatternCreated(void* buzzpat, const char * patname, void* param)
+{
+    ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(param);
+    mi* pmi = reinterpret_cast<mi*>(callbackData->machineInterface);
+    bool ret = true;
+
+    if (pmi != NULL)
+    {
+        //Find the loaded pattern by name - 
+        //The purpose here is to prevent NativeMachineWrapper calling CreatePattern on PatterXP's MachineInterfaceEx,
+        //if PatternXP already knows about the machine.
+        //
+        //This is needed for when loading pattern data from stream, where the pattern has been created in 
+        //PatternXP, but not yet fully set up.  If CreateMachine is called when a pattern is in that state, then
+        //the loaded data is erased as a new CMachinePattern is created and replaces the loaded CMachinePattern.
+        //
+        auto & foundLoadedPat = pmi->loadedPatterns.find(patname);
+        CMachinePattern* patternXpMachinePattern = NULL;
+        
+        if((pmi->patEd->pPattern != NULL) && (pmi->patEd->pPattern->name == patname))
+        {
+            //Pattern exists in PatternXP, so don't notify the ExInterface (don't call CreatePattern)
+            patternXpMachinePattern = pmi->patEd->pPattern;
+            pmi->patEd->pPattern->pPattern = reinterpret_cast<CPattern*>(buzzpat);
+        }
+
+        //find the pattern by name
+        auto& foundpat = pmi->patterns.find(reinterpret_cast<CPattern*>(buzzpat));
+        if((patternXpMachinePattern == NULL) && (foundpat == pmi->patterns.end()))
+        {
+            //If a pattern exists in loadedPatterns, but not in patterns, 
+            //then we DO want CreatePatter on the MachineInterfaceEx to be called.
+            //Doing so will cause the pattern to be moved from loadedPatterns to patterns
+            ret = (pmi->loadedPatterns.find(patname) != pmi->loadedPatterns.end());
+        }
+        else
+        {
+            ret = false; //do not call CreatePattern - PatternXP already knows about this machine!
+        }
+    }
+
+    return ret;
+}
+
 static void OnMenuItem_CreatePattern(int id, void* param)
 {
     ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(param);
@@ -124,7 +168,8 @@ ReBuzzPatternXpMachine::ReBuzzPatternXpMachine(IBuzzMachineHost^ host) : m_host(
     m_machineWrapper = gcnew MachineWrapper(m_interface, host, (IBuzzMachine^)this, cbdata, 
                                             NULL,
                                             GetKeyboardFocusWindow, 
-                                            RedrawEditorWindow);
+                                            RedrawEditorWindow,
+                                            PatternCreated);
 
     cbdata->machineWrapper.Assign(m_machineWrapper);
 }
