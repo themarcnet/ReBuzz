@@ -146,7 +146,17 @@ namespace ReBuzz
             //Notify the machine EX interface
             if (cbdata->exiface != NULL)
             {
-                
+                if (changeflags & PatternEventFlags::PatternEventFlags_Name)
+                {
+                    std::string newName;
+                    Utils::CLRStringToStdString(rebuzzPat->Name, newName);
+                    cbdata->exiface->RenamePattern(buzzPat, newName.c_str());
+                }
+
+                if (changeflags & PatternEventFlags::PatternEventFlags_Length)
+                {
+                    cbdata->exiface->SetPatternLength(buzzPat, rebuzzPat->Length);
+                }
             }
 
             //Call the redraw callback
