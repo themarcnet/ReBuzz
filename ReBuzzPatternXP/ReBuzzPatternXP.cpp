@@ -44,6 +44,8 @@ struct ReBuzzPatternXpCallbackData
     CMachineInterfaceEx* machineInterfaceEx;
     RefClassWrapper<MachineWrapper> machineWrapper;
     RefClassWrapper<ReBuzzPatternXpMachine> parent;
+    bool busy;
+    std::mutex datalock;
 };
 
 //Callbacks
@@ -108,6 +110,14 @@ static bool PatternCreated(void* buzzpat, const char * patname, void* param)
     return ret;
 }
 
+static void OnEditorCreated(void* param)
+{
+    //Editor has been created, so we can allow Tick() to run as normal again
+    ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(param);
+    std::lock_guard<std::mutex> lg(callbackData->datalock);
+    callbackData->busy = false;
+}
+
 static void OnMenuItem_CreatePattern(int id, void* param)
 {
     ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(param);
@@ -162,11 +172,12 @@ ReBuzzPatternXpMachine::ReBuzzPatternXpMachine(IBuzzMachineHost^ host) : m_host(
     mi* pmi = reinterpret_cast<mi*>(m_interface);
     cbdata->machineInterfaceEx = &pmi->ex;
     cbdata->parent = this;
+    cbdata->busy = false;
     m_callbackdata = cbdata;
 
     //Create machine wrapper
     m_machineWrapper = gcnew MachineWrapper(m_interface, host, (IBuzzMachine^)this, cbdata, 
-                                            NULL,
+                                            OnEditorCreated,
                                             GetKeyboardFocusWindow, 
                                             RedrawEditorWindow,
                                             PatternCreated);
@@ -184,9 +195,12 @@ ReBuzzPatternXpMachine::~ReBuzzPatternXpMachine()
 
 void ReBuzzPatternXpMachine::Work()
 {
-    //Make sure we're initialised before working...
-    if(m_initialised && (m_patternEditor != NULL) && (m_interface != NULL))
-    {
+    ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(m_callbackdata);
+    std::lock_guard<std::mutex> lg(callbackData->datalock);
+
+    //Make sure we're initialised or busy before working...
+    if(!callbackData->busy && m_initialised && (m_patternEditor != NULL) && (m_interface != NULL))
+    {  
         //Tick the machine / native buzz machine wrapper
         m_machineWrapper->Tick();
 
@@ -227,6 +241,12 @@ UserControl^ ReBuzzPatternXpMachine::PatternEditorControl()
     {
         return m_patternEditor->GetRef();
     }
+
+    //Set us as busy so that the pattern editor Tick() isn't called until
+    //the editor has been finished, and the pattern data fully loaded
+    ReBuzzPatternXpCallbackData* callbackData = reinterpret_cast<ReBuzzPatternXpCallbackData*>(m_callbackdata);
+    std::lock_guard<std::mutex> lg(callbackData->datalock);
+    callbackData->busy = true;
 
     m_patternEditor = new RefClassWrapper<UserControl>(m_machineWrapper->PatternEditorControl());
 
