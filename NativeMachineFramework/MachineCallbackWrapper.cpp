@@ -523,6 +523,12 @@ namespace ReBuzz
             rebuzzmach->SendControlChanges();
         }
 
+        bool MachineCallbackWrapper::GetPlayNotesState()
+        {
+            //Not sure on the condition where we should return 'false'
+            return true;
+        }
+
         int MachineCallbackWrapper::GetBaseOctave()
         {
             IMachine^ mach = m_machineWrapper.GetRef()->GetThisReBuzzMachine();

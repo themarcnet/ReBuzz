@@ -74,6 +74,7 @@ namespace ReBuzz
             int GetStateFlags() override;
             void ControlChange(CMachine* pmac, int group, int track, int param, int value) override;
             void SendControlChanges(CMachine* pmac) override;
+            bool GetPlayNotesState() override;
             
             int GetBaseOctave() override;
             void SetPatternEditorMachine(CMachine* pmac, bool gotoeditor) override;
