@@ -13,7 +13,9 @@ using System.Text;
 using System.Windows;
 using System.Xml;
 using System.Xml.Serialization;
+using BuzzGUI.Common;
 using static ReBuzz.FileOps.BMXFile;
+using BuzzGUI.Common.InterfaceExtensions;
 
 namespace ReBuzz.FileOps
 {
@@ -22,17 +24,22 @@ namespace ReBuzz.FileOps
         private readonly ReBuzzCore buzz;
         private readonly string fileName;
         private Dictionary<string, SubSection> subSections = new Dictionary<string, SubSection>();
-        readonly Dictionary<string, string> importDictionary = new Dictionary<string, string>();
+        readonly Dictionary<string, string> importDictionaryAll = new Dictionary<string, string>();
+        readonly Dictionary<string, string> importDictionaryNonHidden = new Dictionary<string, string>();
         public event Action<FileEventType, string, object> FileEvent;
         private Dictionary<int, int> remappedWaveReferences = new Dictionary<int, int>();
         private ImportSongAction importAction;
 
         List<MachineCore> machines;
+        private readonly string buzzPath;
+        private readonly IUiDispatcher dispatcher;
 
-        public BMXMLFile(ReBuzzCore buzz)
+        public BMXMLFile(ReBuzzCore buzz, string buzzPath, IUiDispatcher dispatcher)
         {
+            this.buzzPath = buzzPath;
             this.buzz = buzz;
             machines = new List<MachineCore>();
+            this.dispatcher = dispatcher;
         }
 
         void FileOpsEvent(FileEventType type, string text, object o = null)
@@ -160,7 +167,7 @@ namespace ReBuzz.FileOps
                 int tracks = machineData.ParameterGroups[2].TrackCount;
 
                 MachineDLL machineDLL = new MachineDLL();
-                MachineCore machineProto = new MachineCore(buzz.SongCore);
+                MachineCore machineProto = new MachineCore(buzz.SongCore, buzzPath, dispatcher);
                 string name = XmlConvert.DecodeName(machineData.Name);
                 if (Encoding.ASCII.GetBytes(name)[0] == 1)
                 {
@@ -224,25 +231,39 @@ namespace ReBuzz.FileOps
                         // Update Position
                         machineProto.Position = new Tuple<float, float>(x, y);
 
+                        // Update tpb & bpm immediately if machines read these during creation
+                        var masterGlobals = machineProto.ParameterGroups[1];
+                        buzz.MasterVolume = 1.0 - (masterGlobals.Parameters[0].GetValue(0) / (double)masterGlobals.Parameters[0].MaxValue);
+                        buzz.BPM = masterGlobals.Parameters[1].GetValue(0);
+                        buzz.TPB = masterGlobals.Parameters[2].GetValue(0);
+
                         // Copy parametervalues
-                        CopyParameters(machineData.ParameterGroups[0], machineProto, 0, 0);
-                        CopyParameters(machineData.ParameterGroups[1], machineProto, 1, 0);
-                        for (int m = 0; m < machineProto.TrackCount; m++)
-                        {
-                            CopyParameters(machineData.ParameterGroups[2], machineProto, 2, m);
-                        }
+                        //CopyParameters(machineData.ParameterGroups[0], machineProto, 0, 0);
+                        //CopyParameters(machineData.ParameterGroups[1], machineProto, 1, 0);
+                        //for (int m = 0; m < machineProto.TrackCount; m++)
+                        //{
+                        //    CopyParameters(machineData.ParameterGroups[2], machineProto, 2, m);
+                        //}
                     }
                 }
                 else
                 {
                     // Don't call Init for native machines yet. Wait until all machines are loaded and then call init. Control machines might need machine info.
-                    var machineNew = buzz.MachineManager.CreateMachine(machineDLL.Name, machineDLL.Path, null, data, tracks, x, y, machineProto.Hidden, name, true);
-                    dictInitData[machineNew] = new MachineInitData() { data = data, tracks = tracks };
+                    var machineNew = buzz.MachineManager.CreateMachine(machineDLL.Name, machineDLL.Path, null, data, tracks, x, y, machineProto.Hidden, name, false);
 
-                    // Copy stuff from proto to real. ToDo: Clean this up;
-                    foreach (var ma in machineNew.AttributesList)
+                    // Saved machine parameter count/indexes might be a different from the machine that is currently available for ReBuzz. Create parameter mappings
+                    RemapLoadedMachineParameterIndex(machineNew, machineProto);
+
+                    if (!machineNew.DLL.IsManaged)
                     {
-                        var at = machineData.Attributes.FirstOrDefault(a => a.Name == ma.Name);
+                        dictInitData[machineNew] = new MachineInitData() { data = data, tracks = tracks };
+                    }
+
+                    // Copy stuff from proto to real. Attributes can have same names?? Just iterate.
+                    for (int i = 0; i < machineNew.AttributesList.Count; i++)
+                    {
+                        var ma = machineNew.AttributesList[i];
+                        var at = i < machineData.Attributes.Count() ? machineData.Attributes[i] : null;
                         if (at != null)
                         {
                             ma.Value = at.Value;
@@ -254,7 +275,7 @@ namespace ReBuzz.FileOps
                         // Copy parametervalues
                         CopyParameters(machineData.ParameterGroups[0], machineNew, 0, 0);
                         CopyParameters(machineData.ParameterGroups[1], machineNew, 1, 0);
-                        for (int m = 0; m < machineNew.TrackCount; m++)
+                        for (int m = 0; m < tracks; m++)
                         {
                             CopyParameters(machineData.ParameterGroups[2], machineNew, 2, m);
                         }
@@ -264,45 +285,60 @@ namespace ReBuzz.FileOps
                         AddGroup(machineData.ParameterGroups[1], machineNew, 1);
                         AddGroup(machineData.ParameterGroups[2], machineNew, 2);
                         machineNew.MachineDLL.MachineInfo.Type = machineData.Type;
-                        machineNew.Ready = true;
                     }
-                    if (import && !machineNew.Hidden)
+                    if (import)
                     {
                         // Imported machines might get new names, so machines need to update their data
-                        importDictionary[name] = machineNew.Name;
+                        // Includes hidden machines.
+                        importDictionaryAll[name] = machineNew.Name;
 
-                        // Keep track of machines imported, so we can undo them
-                        importAction.AddMachine(machineNew);
+                        if (!machineNew.Hidden)
+                        {
+                            // Keep track of machines imported, so we can undo them
+                            importAction.AddMachine(machineNew);
+
+                            importDictionaryNonHidden[name] = machineNew.Name;
+                        }
                     }
 
                     machines.Add(machineNew);
                 }
             }
+            // Native control machines need to have all machines "visible" before calling init
+            foreach (var kvMachine in dictInitData)
+            {
+                var machine = kvMachine.Key;
 
-            // Send machine names to native machines before adding Patterns.
-            // Some machines can remap machine names.
-            //foreach (var machine in buzz.SongCore.MachinesList.Where(m => !m.DLL.IsManaged && !m.DLL.IsMissing))
-            //{
-                //buzz.MachineManager.RemapMachineNames(machine, importDictionary);
-                //var idata = dictInitData[machine];
+                FileOpsEvent(FileEventType.StatusUpdate, "Init Machine: " + machine.Name + "...");
 
-                //FileOpsEvent(FileEventType.StatusUpdate, "Init Machine: " + machine.Name + "...");
-                // Call Init
-                //buzz.MachineManager.CallInit(machine, idata.data, idata.tracks);
-            //}
+                // Update machine names in ReBuzzEngine
+                buzz.MachineManager.RemapMachineNames(machine, importDictionaryNonHidden);
 
+                var val = kvMachine.Value;
+                buzz.MachineManager.CallInit(machine, val.data, val.tracks);
+            }
+
+            // Pattern Editor Connections
             foreach (var machineData in songData.Machines)
             {
-                string editorName = XmlConvert.DecodeName(machineData.EditorMachine);
-                if (editorName != "")
+                string editorName = GetImportedName(XmlConvert.DecodeName(machineData.EditorMachine));
+                if (editorName != null && editorName !="")
                 {
-                    string machineName = XmlConvert.DecodeName(machineData.Name);
+                    string machineName = GetImportedName(XmlConvert.DecodeName(machineData.Name));
                     var machine = buzz.SongCore.MachinesList.FirstOrDefault(m => m.Name == machineName);
                     var editorMachine = buzz.SongCore.MachinesList.FirstOrDefault(m => m.Name == editorName);
 
+                    // Don't replace Master editor if importing song
                     if (machine != null && editorMachine != null)
                     {
-                        machine.EditorMachine = editorMachine;
+                        if (import && machine.DLL.Info.Type == MachineType.Master)
+                        {
+                            buzz.RemoveMachine(editorMachine);
+                        }
+                        else
+                        {
+                            machine.EditorMachine = editorMachine;
+                        }
                     }
                 }
             }
@@ -311,12 +347,12 @@ namespace ReBuzz.FileOps
             FileOpsEvent(FileEventType.StatusUpdate, "Load Connections...");
             foreach (var cData in songData.MachineConnections)
             {
-                MachineCore machineFrom = buzz.SongCore.MachinesList.FirstOrDefault(m => m.Name == XmlConvert.DecodeName(cData.Source));
-                MachineCore machineTo = buzz.SongCore.MachinesList.FirstOrDefault(m => m.Name == XmlConvert.DecodeName(cData.Destination));
+                MachineCore machineFrom = buzz.SongCore.MachinesList.FirstOrDefault(m => m.Name == GetImportedName(XmlConvert.DecodeName(cData.Source)));
+                MachineCore machineTo = buzz.SongCore.MachinesList.FirstOrDefault(m => m.Name == GetImportedName(XmlConvert.DecodeName(cData.Destination)));
                 if (machineFrom == null || machineTo == null)
                     continue;
 
-                MachineConnectionCore connection = new MachineConnectionCore();
+                MachineConnectionCore connection = new MachineConnectionCore(dispatcher);
                 connection.Amp = cData.Amp;
                 connection.Pan = cData.Pan;
                 connection.SourceChannel = cData.SourceChannel;
@@ -337,7 +373,7 @@ namespace ReBuzz.FileOps
                     {
                         machineTo.InputChannelCount = 1;
                     }
-                    new ConnectMachinesAction(buzz, connection).Do();
+                    new ConnectMachinesAction(buzz, connection, dispatcher).Do();
                 }
             }
 
@@ -345,16 +381,13 @@ namespace ReBuzz.FileOps
             FileOpsEvent(FileEventType.StatusUpdate, "Load Patterns...");
             foreach (var machineData in songData.Machines)
             {
-                string machineName = XmlConvert.DecodeName(machineData.Name);
+                string machineName = GetImportedName(XmlConvert.DecodeName(machineData.Name));
                 var machine = buzz.SongCore.MachinesList.FirstOrDefault(c => c.Name == machineName);
                 if (machine != null)
                 {
                     foreach (var p in machineData.Patterns)
                     {
-                        if (!machine.DLL.IsMissing)
-                        {
-                            machine.CreatePattern(p.Name, p.Length);
-                        }
+                        machine.CreatePattern(p.Name, p.Length);
                     }
                 }
             }
@@ -363,7 +396,7 @@ namespace ReBuzz.FileOps
             FileOpsEvent(FileEventType.StatusUpdate, "Load Patterns...");
             foreach (var machineData in songData.Machines)
             {
-                string machineName = XmlConvert.DecodeName(machineData.Name);
+                string machineName = GetImportedName(XmlConvert.DecodeName(machineData.Name));
                 var machine = buzz.SongCore.MachinesList.FirstOrDefault(c => c.Name == machineName);
                 if (machine != null)
                 {
@@ -376,12 +409,12 @@ namespace ReBuzz.FileOps
                             int j = 0;
                             foreach (var c in p.Columns)
                             {
-                                var targetMachine = buzz.SongCore.MachinesList.FirstOrDefault(m => m.Name == XmlConvert.DecodeName(c.Machine));
+                                var targetMachine = buzz.SongCore.MachinesList.FirstOrDefault(m => m.Name == GetImportedName(XmlConvert.DecodeName(c.Machine)));
                                 int group = c.Group;
                                 int track = c.Track;
                                 int indexInGroup = c.IndexInGroup;
 
-                                IParameter targetParameter = targetMachine != null && (group != -1 && indexInGroup != -1) ? targetMachine.ParameterGroups[group].Parameters[indexInGroup] : ParameterCore.GetMidiParameter(targetMachine);
+                                IParameter targetParameter = targetMachine != null && (group != -1 && indexInGroup != -1) ? targetMachine.ParameterGroups[group].Parameters[indexInGroup] : ParameterCore.GetMidiParameter(targetMachine, dispatcher);
                                 pattern.InsertColumn(j, targetParameter, track);
                                 var column = pattern.Columns[j];
 
@@ -422,7 +455,7 @@ namespace ReBuzz.FileOps
             int seqIndex = 0;
             foreach (var seq in songData.Sequences)
             {
-                var machine = buzz.SongCore.Machines.FirstOrDefault(m => m.Name == XmlConvert.DecodeName(seq.Machine));
+                var machine = buzz.SongCore.Machines.FirstOrDefault(m => m.Name == GetImportedName(XmlConvert.DecodeName(seq.Machine)));
                 if (machine != null)
                 {
                     buzz.SongCore.AddSequence(machine, seqIndex);
@@ -479,7 +512,7 @@ namespace ReBuzz.FileOps
             FileOpsEvent(FileEventType.StatusUpdate, "Load Machine Properties...");
             foreach (var machineData in songData.Machines)
             {
-                string machineName = XmlConvert.DecodeName(machineData.Name);
+                string machineName = GetImportedName(XmlConvert.DecodeName(machineData.Name));
                 var machine = buzz.SongCore.MachinesList.FirstOrDefault(c => c.Name == machineName);
                 if (machine != null)
                 {
@@ -494,7 +527,7 @@ namespace ReBuzz.FileOps
             FileOpsEvent(FileEventType.StatusUpdate, "Load Machine Windows...");
             foreach (var machineData in songData.Machines)
             {
-                string machineName = XmlConvert.DecodeName(machineData.Name);
+                string machineName = GetImportedName(XmlConvert.DecodeName(machineData.Name));
                 var machine = buzz.SongCore.MachinesList.FirstOrDefault(c => c.Name == machineName);
                 if (machine != null)
                 {
@@ -515,7 +548,7 @@ namespace ReBuzz.FileOps
             // Info text
             buzz.InfoText = songData.InfoText;
 
-            foreach (var machine in dictInitData.Keys)
+            foreach (var machine in machines)
             {
                 // Assign editor to pattern before calling UpdateWaveReferences
                 if (machine.EditorMachine != null)
@@ -531,16 +564,26 @@ namespace ReBuzz.FileOps
                 }
 
                 // Notify import finished and machine name changes
-                buzz.MachineManager.ImportFinished(machine, importDictionary);
+                buzz.MachineManager.ImportFinished(machine, importDictionaryNonHidden);
             }
+        }
+
+        string GetImportedName(string name)
+        {
+            if (name == null)
+                return null;
+            else if (importDictionaryAll.ContainsKey(name))
+                return importDictionaryAll[name];
+            else return name;
         }
 
         private void CopyParameters(BMXMLParameterGroup pgFrom, MachineCore machineNew, int group, int track)
         {
             var pgTo = machineNew.ParameterGroupsList[group];
-            foreach (var pTo in pgTo.ParametersList)
+            for (int i = 0; i < pgTo.ParametersList.Count; i++)
             {
-                var pFrom = pgFrom.Parameters.FirstOrDefault(par => par.Name == pTo.Name);
+                var pTo = pgTo.ParametersList[i];
+                var pFrom = i < pgFrom.Parameters.Count() ? pgFrom.Parameters[i] : null;
                 if (pFrom != null)
                 {
                     var val = pFrom.Values.FirstOrDefault(t => t.Track == track);
@@ -562,11 +605,11 @@ namespace ReBuzz.FileOps
             int index = 0;
             foreach (var pFrom in pgFrom.Parameters)
             {
-                ParameterCore pTo = new ParameterCore();
+                ParameterCore pTo = new ParameterCore(dispatcher);
                 pTo.Group = pgTo;
                 pTo.IndexInGroup = index;
-                pTo.Name = pFrom.Name;
-                pTo.Description = pFrom.Description;
+                pTo.Name = XmlConvert.DecodeName(pFrom.Name);
+                pTo.Description = XmlConvert.DecodeName(pFrom.Description);
                 pTo.MinValue = pFrom.MinValue;
                 pTo.MaxValue = pFrom.MaxValue;
                 pTo.DefValue = pFrom.DefValue;
@@ -579,6 +622,36 @@ namespace ReBuzz.FileOps
             }
 
             machineNew.ParameterGroupsList.Add(pgTo);
+        }
+
+        private void RemapLoadedMachineParameterIndex(MachineCore machine, MachineCore savedMachine)
+        {
+            Dictionary<int, int> paramMappings = new Dictionary<int, int>();
+
+            var machineParameters = machine.AllParameters().ToArray();
+            var savedParameters = savedMachine.AllParameters().ToArray();
+
+            for (int i = 0; i < savedParameters.Length; i++)
+            {
+                bool found = false;
+                for (int j = 0; j < machineParameters.Length; j++)
+                {
+                    if (savedParameters[i].Name == machineParameters[j].Name)
+                    {
+                        paramMappings[i] = j;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    // Machine loaded into ReBuzz does not have the same param
+                    paramMappings[i] = -1;
+                }
+            }
+
+            machine.remappedLoadedMachineParameterIndexes = paramMappings;
         }
 
         public void Save(string path, object obj)
@@ -662,8 +735,8 @@ namespace ReBuzz.FileOps
                     {
                         BMXMLParameter ppg = new BMXMLParameter();
                         ppg.Type = p.Type;
-                        ppg.Name = p.Name;
-                        ppg.Description = p.Description;
+                        ppg.Name = XmlConvert.EncodeName(p.Name);
+                        ppg.Description = XmlConvert.EncodeName(p.Description);
                         ppg.MinValue = p.MinValue;
                         ppg.MaxValue = p.MaxValue;
                         ppg.NoValue = p.NoValue;

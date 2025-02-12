@@ -1,12 +1,21 @@
+#include <sstream>
 #include "MachineCallbackWrapper.h"
 
 //<Windows.h> must be after MachineCallbackWrapper.h, to avoide <Windows.h> redefining some of the 
 //callback methods by suffixing a W
 #include <Windows.h>
 
+
+
+#undef GetProfileInt
+#undef GetProfileString
+#undef WriteProfileString
+
 #include "MachineEventWrapper.h"
 #include "MachineWrapper.h"
 #include "Utils.h"
+
+
 
 using BuzzGUI::Common::Global;
 using BuzzGUI::Interfaces::IIndex;
@@ -14,10 +23,12 @@ using BuzzGUI::Interfaces::IWave;
 using BuzzGUI::Interfaces::IWaveLayer;
 using BuzzGUI::Interfaces::ISequence;
 using BuzzGUI::Interfaces::IParameterGroup;
+
 using Buzz::MachineInterface::IBuzzMachineHost;
 
 using Buzz::MachineInterface::SubTickInfo;
 
+using System::Xml::Linq::XElement;
 
 namespace ReBuzz
 {
@@ -535,6 +546,33 @@ namespace ReBuzz
             return mach->BaseOctave;
         }
 
+        int MachineCallbackWrapper::GetSelectedWave()
+        {
+            IWave^ wave = m_machineWrapper.GetRef()->GetSelectedWave();
+            if (wave == nullptr)
+                return 0;
+
+            return wave->Index + 1;
+        }
+
+        CWaveInfo const* MachineCallbackWrapper::GetWave(int const i)
+        {
+            IWave^ wave = m_machineWrapper.GetRef()->FindWaveByOneIndex(i);
+            if (wave != nullptr)
+            {
+                return m_machineWrapper.GetRef()->GetWaveInfo(wave);
+            }
+        }
+
+        void MachineCallbackWrapper::SelectWave(int i)
+        {
+            IWave^ wave = m_machineWrapper.GetRef()->FindWaveByOneIndex(i);
+            if (wave != nullptr)
+            {
+                m_machineWrapper.GetRef()->SetSelectedWave(wave);
+            }
+        }
+
         void MachineCallbackWrapper::SetPatternEditorMachine(CMachine* pmac, bool gotoeditor)
         {
             IMachine^ mach = m_machineWrapper.GetRef()->GetReBuzzMachine(pmac);
@@ -546,7 +584,131 @@ namespace ReBuzz
             {
                 //m_exInterface->SetPatternTargetMachine
             }
+        }
 
+        
+
+        int MachineCallbackWrapper::GetProfileInt(char const* entry, int defvalue)
+        {
+            int ret = defvalue;
+            try
+            {
+                String^ profilename = m_machinehost.GetRef()->Machine->DLL->Info->ShortName;
+                XElement^ profile = Global::Buzz->GetModuleProfileInts(profilename);
+
+
+                String^ entryname = Utils::stdStringToCLRString(entry);
+                XElement^ value = profile->Element(entryname);
+                if (value == nullptr)
+                {
+                    profile->Add(gcnew XElement(entryname, ret));
+                }
+                else
+                {
+                    ret = System::Int32::Parse(value->Value);
+                }
+            }
+            catch(System::Exception^ ex)
+            {}
+
+            return ret;
+        }
+        
+        void MachineCallbackWrapper::GetProfileString(char const* entry, char const* value, char const* defvalue)
+        {}
+        
+        void MachineCallbackWrapper::GetProfileBinary(char const* entry, byte** data, int* nbytes)
+        {
+            *data = NULL;
+            *nbytes = 0;
+            try
+            {
+                String^ profilename = m_machinehost.GetRef()->Machine->DLL->Info->ShortName;
+                XElement^ profile = Global::Buzz->GetModuleProfileBinary(profilename);
+                String^ entryname = Utils::stdStringToCLRString(entry);
+                XElement^ value = profile->Element(entryname);
+                cli::array<uint8_t>^ bytearray = nullptr;
+
+                if (value != nullptr)
+                {
+                    bytearray = System::Convert::FromBase64String(value->Value);
+                    pin_ptr<uint8_t> byteArrayPtr(&bytearray[0]);
+                    *data = (uint8_t *)LocalAlloc(LPTR, bytearray->Length);
+                    memcpy(*data, byteArrayPtr, bytearray->Length);
+                    *nbytes = bytearray->Length;
+                }
+            }
+            catch (System::Exception^ ex)
+            {
+                if (*data != NULL)
+                {
+                    LocalFree(*data);
+                    *data = NULL;
+                    nbytes = 0;
+                }
+            }
+        }
+
+        void MachineCallbackWrapper::FreeProfileBinary(byte* data)
+        {
+            if (data != NULL)
+                LocalFree(data);
+        }
+
+        void MachineCallbackWrapper::WriteProfileInt(char const* entry, int value)
+        {
+            try
+            {
+                String^ profilename = m_machinehost.GetRef()->Machine->DLL->Info->ShortName;
+                XElement^ profile = Global::Buzz->GetModuleProfileInts(profilename);
+                String^ entryname = Utils::stdStringToCLRString(entry);
+                XElement^ profilevalue = profile->Element(entryname);
+
+                if (profilevalue == nullptr)
+                {
+                    profile->Add(gcnew XElement(entryname, value));
+                }
+                else
+                {
+                    std::ostringstream  valuestr;
+                    valuestr << value;
+                    profilevalue->Value = Utils::stdStringToCLRString(valuestr.str());
+                }
+            }
+            catch (System::Exception^ ex)
+            {
+            }
+        }
+
+        void MachineCallbackWrapper::WriteProfileString(char const* entry, char const* value)
+        {}
+        
+        void MachineCallbackWrapper::WriteProfileBinary(char const* entry, byte* data, int nbytes)
+        {
+            try
+            {
+                String^ profilename = m_machinehost.GetRef()->Machine->DLL->Info->ShortName;
+                XElement^ profile = Global::Buzz->GetModuleProfileBinary(profilename);
+                String^ entryname = Utils::stdStringToCLRString(entry);
+                XElement^ profilevalue = profile->Element(entryname);
+
+                cli::array<uint8_t>^ bytearray = gcnew cli::array<uint8_t>(nbytes);
+                pin_ptr<uint8_t> byteArrayPtr(&bytearray[0]);
+                memcpy(byteArrayPtr, data, nbytes);
+                String^ database64 = System::Convert::ToBase64String(bytearray, System::Base64FormattingOptions::None);
+                
+                if (profilevalue == nullptr)
+                {
+                    profile->Add(gcnew XElement(entryname, database64));
+                }
+                else
+                {
+                    profilevalue->Value = database64;
+                }
+            }
+            catch (System::Exception^ ex)
+            {
+            }
         }
     }
 }

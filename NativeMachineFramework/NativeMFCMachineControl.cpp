@@ -18,6 +18,11 @@ namespace ReBuzz
            
         }
 
+        NativeMFCMachineControl::!NativeMFCMachineControl()
+        {
+            Destroy();
+        }
+
         NativeMFCMachineControl::~NativeMFCMachineControl()
         {
             Destroy();
@@ -29,6 +34,7 @@ namespace ReBuzz
             {
                 m_onDetatch(m_cwnd, m_callbackParam);
                 m_cwnd = IntPtr::Zero;
+                m_onDetatch = nullptr;
             }
         }
 

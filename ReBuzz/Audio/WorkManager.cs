@@ -10,6 +10,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using BuzzGUI.Common.Settings;
 
 namespace ReBuzz.Audio
 {
@@ -32,7 +33,7 @@ namespace ReBuzz.Audio
         internal static BuzzMasterInfo MasterInfoStruct;
         unsafe internal static byte[] MasterInfoData = new byte[sizeof(BuzzMasterInfo)];
 
-        bool multiThreadingEnalbed = false;
+        bool multiThreadingEnabled = false;
 
         private readonly ReBuzzCore buzzCore;
         readonly WorkThreadEngine workEngine;
@@ -45,11 +46,12 @@ namespace ReBuzz.Audio
 
         float[] playWaveBuffer = new float[256 * 2];
 
-        public WorkManager(ReBuzzCore buzzCore, WorkThreadEngine workEngine, int algorithm)
+        public WorkManager(ReBuzzCore buzzCore, WorkThreadEngine workEngine, int algorithm, EngineSettings settings)
         {
             this.buzzCore = buzzCore;
             this.workEngine = workEngine;
             this.algorithm = algorithm;
+            engineSettings = settings;
         }
         internal void CopyMasterInfo()
         {
@@ -73,7 +75,7 @@ namespace ReBuzz.Audio
             {
                 long time = DateTime.Now.Ticks;
 
-                multiThreadingEnalbed = Global.EngineSettings.Multithreading;
+                multiThreadingEnabled = engineSettings.Multithreading;
 
                 var subTickInfo = ReBuzzCore.subTickInfo;
                 var masterInfo = ReBuzzCore.masterInfo;
@@ -99,9 +101,6 @@ namespace ReBuzz.Audio
 
                     // Update SubTick
                     UpdateSubTickLength();
-
-                    // Reset non static parameteres if tick == 0
-                    UpdateNonStaticParametersToDefault();
 
                     // HandleParameterRecord();
 
@@ -133,10 +132,13 @@ namespace ReBuzz.Audio
                     buzzCore.MachineManager.UpdateMasterAndSubTickInfoToHost();
 
                     // Tick all machines first and then call tick again if sendcontrolchanges flag set?
-                    CallTickMultiThread();
+                    CallTick();
 
                     // Call work
                     ReadWork(buffer, workBufferOffset, samplesToProcess);
+
+                    // Reset non static parameteres if tick == 0
+                    UpdateNonStaticParametersToDefault();
 
                     // Mix waves playing from wavetable 
                     if (buzzCore.SongCore.WavetableCore.IsPlayingWave())
@@ -238,36 +240,32 @@ namespace ReBuzz.Audio
             int noRecord = 1 << 16;
             foreach (var machine in buzzCore.SongCore.MachinesList.Where(m => !m.DLL.IsManaged))
             {
-                if (ReBuzzCore.masterInfo.PosInTick == 0 || (Global.EngineSettings.SubTickTiming && ReBuzzCore.subTickInfo.PosInSubTick == 0 && machine.DLL.Info.Version >= MachineManager.BUZZ_MACHINE_INTERFACE_VERSION_42))
+                if (ReBuzzCore.masterInfo.PosInTick == 0 || (engineSettings.SubTickTiming && ReBuzzCore.subTickInfo.PosInSubTick == 0 && machine.DLL.Info.Version >= MachineManager.BUZZ_MACHINE_INTERFACE_VERSION_42))
                 {
+                    foreach (var p in machine.ParameterGroups[0].Parameters)
+                    {
+                        // Reset parameters so they wont be triggered next Tick
+                        p.SetValue(noRecord, p.NoValue);
+                    }
                     foreach (var p in machine.ParameterGroups[1].Parameters)
                     {
-                        // Reset non-state parameters so they wont be triggered next Tick
-                        if (!p.Flags.HasFlag(ParameterFlags.State))
-                        {
-                            p.SetValue(noRecord, p.NoValue);
-                        }
+                        // Reset parameters so they wont be triggered next Tick
+                        p.SetValue(noRecord, p.NoValue);
                     }
                     foreach (var p in machine.ParameterGroups[2].Parameters)
                     {
                         for (int i = 0; i < machine.TrackCount; i++)
                         {
-                            // Reset non-state parameters so they wont be triggered next Tick
-                            // Todo: move to end of Work Manager and apply when tick
-                            if (!p.Flags.HasFlag(ParameterFlags.State))
-                            {
-                                p.SetValue(i | noRecord, p.NoValue);
-                            }
+                            // Reset parameters so they wont be triggered next Tick
+                            p.SetValue(i | noRecord, p.NoValue);
                         }
                     }
                 }
             }
         }
 
-        internal static void UpdatePatternPositions(int sampleCount)
+        internal void UpdatePatternPositions(int sampleCount)
         {
-            var buzzCore = Global.Buzz as ReBuzzCore;
-
             // Clear all pattern play positions
             foreach (var machine in buzzCore.SongCore.Machines)
             {
@@ -372,28 +370,70 @@ namespace ReBuzz.Audio
         }
 
         readonly List<Task> tickTasks = new List<Task>();
+
         internal void CallTickMultiThread()
         {
             foreach (var machine in buzzCore.SongCore.MachinesList)
             {
-                if (machine.Ready)
+                // Tick should be inexpensive operation so no tasks?
+                // Some old machines don't support subtick
+                if (machine.IsControlMachine && ReBuzzCore.masterInfo.PosInTick == 0 ||
+                    (engineSettings.SubTickTiming && ReBuzzCore.subTickInfo.PosInSubTick == 0 && machine.DLL.Info.Version > MachineManager.BUZZ_MACHINE_INTERFACE_VERSION_42))
                 {
-                    // Tick should be inexpensive operation so no tasks?
-                    // Some old machines don't support subtick
-                    if (ReBuzzCore.masterInfo.PosInTick == 0 ||
-                        (Global.EngineSettings.SubTickTiming && ReBuzzCore.subTickInfo.PosInSubTick == 0 && machine.DLL.Info.Version > MachineManager.BUZZ_MACHINE_INTERFACE_VERSION_42))
+                    var t = AudioEngine.TaskFactoryAudio.StartNew(() =>
                     {
-                        var t = AudioEngine.TaskFactoryAudio.StartNew(() =>
-                        {
-                            var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
-                            workInstance.Tick(false, false);
-                        });
-                        tickTasks.Add(t);
-                    }
+                        var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
+                        workInstance.Tick(false, false);
+                    });
+                    tickTasks.Add(t);
                 }
             }
             Task.WaitAll(tickTasks.ToArray());
             tickTasks.Clear();
+
+            foreach (var machine in buzzCore.SongCore.MachinesList)
+            {
+                if (!machine.IsControlMachine && ReBuzzCore.masterInfo.PosInTick == 0 ||
+                    (engineSettings.SubTickTiming && ReBuzzCore.subTickInfo.PosInSubTick == 0 && machine.DLL.Info.Version > MachineManager.BUZZ_MACHINE_INTERFACE_VERSION_42))
+                {
+                    var t = AudioEngine.TaskFactoryAudio.StartNew(() =>
+                    {
+                        var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
+                        workInstance.Tick(false, false);
+                    });
+                    tickTasks.Add(t);
+                }
+            }
+            Task.WaitAll(tickTasks.ToArray());
+            tickTasks.Clear();
+        }
+
+        internal void CallTick()
+        {
+            // First control, then other?
+            foreach (var machine in buzzCore.SongCore.MachinesList)
+            {
+                // Tick should be inexpensive operation so no tasks?
+                // Some old machines don't support subtick
+                if (machine.IsControlMachine && ReBuzzCore.masterInfo.PosInTick == 0 ||
+                    (engineSettings.SubTickTiming && ReBuzzCore.subTickInfo.PosInSubTick == 0 && machine.DLL.Info.Version > MachineManager.BUZZ_MACHINE_INTERFACE_VERSION_42))
+                {
+                    var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
+                    workInstance.Tick(false, false);
+                }
+            }
+
+            foreach (var machine in buzzCore.SongCore.MachinesList)
+            {
+                // Tick should be inexpensive operation so no tasks?
+                // Some old machines don't support subtick
+                if (!machine.IsControlMachine && ReBuzzCore.masterInfo.PosInTick == 0 ||
+                    (engineSettings.SubTickTiming && ReBuzzCore.subTickInfo.PosInSubTick == 0 && machine.DLL.Info.Version > MachineManager.BUZZ_MACHINE_INTERFACE_VERSION_42))
+                {
+                    var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
+                    workInstance.Tick(false, false);
+                }
+            }
         }
 
         struct PlayingEventsStruct
@@ -512,7 +552,7 @@ namespace ReBuzz.Audio
             if (master == null)
                 return workSamplesCount;
 
-            if (!multiThreadingEnalbed)
+            if (!multiThreadingEnabled)
             {
                 HandleWorkAlgorithmSingleThread(master, workSamplesCount);
             }
@@ -568,11 +608,9 @@ namespace ReBuzz.Audio
                     var machine = workList.Keys.First();
 
                     // Call work and update machine activity flag
-                    if (machine.Ready)
-                    {
-                        var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
-                        workInstance.TickAndWork(workSamplesCount, true);
-                    }
+
+                    var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
+                    workInstance.TickAndWork(workSamplesCount, true);
 
                     machine.workDone = true;
                 }
@@ -582,22 +620,19 @@ namespace ReBuzz.Audio
 
                     foreach (var machine in workList.Keys.OrderByDescending(m => m.performanceLastCount))
                     {
-                        if (machine.Ready)
+                        var t = AudioEngine.TaskFactoryAudio.StartNew(() =>
                         {
-                            var t = AudioEngine.TaskFactoryAudio.StartNew(() =>
-                            {
-                                if (machine.workDone)
-                                    return;
+                            if (machine.workDone)
+                                return;
 
-                                // Call work and update machine activity flag
-                                var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
-                                workInstance.TickAndWork(workSamplesCount, true);
+                            // Call work and update machine activity flag
+                            var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
+                            workInstance.TickAndWork(workSamplesCount, true);
 
-                                machine.workDone = true;
-                            });
+                            machine.workDone = true;
+                        });
 
-                            workTasks.Add(t);
-                        }
+                        workTasks.Add(t);
                     }
 
                     // Wait all tasks to complete
@@ -605,7 +640,7 @@ namespace ReBuzz.Audio
                 }
             }
         }
- 
+
         internal void HandleWorkAlgorithmRecursive(MachineCore master, int numRead)
         {
             workList.Clear();
@@ -621,22 +656,20 @@ namespace ReBuzz.Audio
         }
 
         readonly List<Task> workTasks = new List<Task>(100);
+        private readonly EngineSettings engineSettings;
+
         void HandleWorkList(int numRead)
         {
             workTasks.Clear();
             foreach (var machine in workList.Keys)
             {
-                if (machine.Ready)
+                var t = AudioEngine.TaskFactoryAudio.StartNew(() =>
                 {
-                    var t = AudioEngine.TaskFactoryAudio.StartNew(() =>
-                    {
-                        // Call work and update machine activity flag
-
-                        var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
-                        workInstance.TickAndWork(numRead, true);
-                    });
-                    workTasks.Add(t);
-                }
+                    // Call work and update machine activity flag
+                    var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
+                    workInstance.TickAndWork(numRead, true);
+                });
+                workTasks.Add(t);
                 machine.workDone = true;
             }
 
@@ -660,8 +693,8 @@ namespace ReBuzz.Audio
                 {
                     var sourceMachine = input.Source as MachineCore;
 
-                    // Was work called for this machine already?
-                    if (!machine.workDone)
+                    // Was work called for this sourceMachine already?
+                    if (!sourceMachine.workDone)
                     {
                         // Handle inputs
                         var t = AudioEngine.TaskFactoryAudio.StartNew(() =>
@@ -682,11 +715,8 @@ namespace ReBuzz.Audio
                 // All inputs handled (if any)
 
                 // Call work and update machine activity flag
-                if (machine.Ready)
-                {
-                    var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
-                    workInstance.TickAndWork(numRead, true);
-                }
+                var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
+                workInstance.TickAndWork(numRead, true);
 
                 // Count overall branch process time
                 machine.performanceBranchCount = machine.performanceLastCount;
@@ -765,12 +795,8 @@ namespace ReBuzz.Audio
 
                 foreach (var machine in workList.Keys)
                 {
-                    if (machine.Ready)
-                    {
-                        var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
-
-                        workInstance.TickAndWork(workSamplesCount, true);
-                    }
+                    var workInstance = buzzCore.MachineManager.GetMachineWorkInstance(machine);
+                    workInstance.TickAndWork(workSamplesCount, true);
                     machine.workDone = true;
                 }
             }
@@ -784,7 +810,7 @@ namespace ReBuzz.Audio
                 var sourceMachine = input.Source as MachineCore;
 
                 // Was work called for this machine already?
-                if (!sourceMachine.workDone && sourceMachine.Ready)
+                if (!sourceMachine.workDone)
                 {
                     machineCanWork = false;
                     CollectMachinesThatCanWork(sourceMachine);
@@ -798,7 +824,7 @@ namespace ReBuzz.Audio
         }
         private void CollectEditorMachinesThatCanWork()
         {
-            foreach (var mac in (Global.Buzz.Song as SongCore).MachinesList)
+            foreach (var mac in (buzzCore.Song as SongCore).MachinesList)
             {
                 var machine = mac;
                 // Was work called for this editor machine already?
@@ -811,7 +837,7 @@ namespace ReBuzz.Audio
 
         private void CollectControlMachinesThatCanWork()
         {
-            foreach (var mac in Global.Buzz.Song.Machines)
+            foreach (var mac in buzzCore.Song.Machines)
             {
                 var machine = mac as MachineCore;
                 // Was work called for this control machine already?

@@ -18,6 +18,8 @@ namespace ReBuzz
             static String^ stdStringToCLRString(const std::string& str);
 
             static int64_t ObjectToInt64(System::Object^ obj);
+
+            static void RemoveObjectInt64(System::Object^ obj);
         };
     }
 }

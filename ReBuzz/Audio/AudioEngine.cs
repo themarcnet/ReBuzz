@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using BuzzGUI.Common.Settings;
 
 
 namespace ReBuzz.Audio
@@ -46,9 +47,18 @@ namespace ReBuzz.Audio
         private readonly ReBuzzCore buzzCore;
         WasapiCapture wasapiCapture;
 
-        public AudioEngine(ReBuzzCore buzzCore)
+        public AudioEngine(
+          ReBuzzCore buzzCore,
+          EngineSettings settings,
+          string buzzPath,
+          IUiDispatcher dispatcher,
+          IRegistryEx registryEx)
         {
+            this.registryEx = registryEx;
+            this.buzzPath = buzzPath;
             this.buzzCore = buzzCore;
+            engineSettings = settings;
+            this.dispatcher = dispatcher;
             CreateScheduler();
         }
 
@@ -58,7 +68,7 @@ namespace ReBuzz.Audio
 
         internal void CreateScheduler()
         {
-            ThreadCount = RegistryEx.Read("AudioThreads", 4, "Settings");
+            ThreadCount = registryEx.Read("AudioThreads", 4, "Settings");
 
             // Using dedicated scheduler for all time critical events is a good approach
             DedicatedThreadPool dedicatedPool = new DedicatedThreadPool(new DedicatedThreadPoolSettings(ThreadCount));
@@ -68,16 +78,16 @@ namespace ReBuzz.Audio
 
         public void CreateASIOOut(string deviceName)
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            dispatcher.Invoke(() =>
             {
                 var asioOut = new AsioOut(deviceName); // This needs to be called from UI thread
 
                 SelectedOutDevice = new AudioOutDevice() { Name = deviceName, Type = AudioOutType.ASIO, WavePlayer = asioOut };
 
-                int bufferSize = RegistryEx.Read("BufferSize", 2048, "ASIO");
-                int sampleRate = RegistryEx.Read("SampleRate", 44100, "ASIO");
+                int bufferSize = registryEx.Read("BufferSize", 2048, "ASIO");
+                int sampleRate = registryEx.Read("SampleRate", 44100, "ASIO");
                 //AudioProvider = new AudioProvider(buzzCore, machineManager, sampleRate, 2, bufferSize, true);
-                AudioWaveProvider = new AudioWaveProvider(buzzCore, sampleRate, asioOut.DriverOutputChannelCount, bufferSize, true);
+                AudioWaveProvider = new AudioWaveProvider(buzzCore, sampleRate, asioOut.DriverOutputChannelCount, bufferSize, true, registryEx);
 
                 //asioOut.Init(AudioProvider);
                 asioOut.InitRecordAndPlayback(AudioWaveProvider, 2, sampleRate);
@@ -102,7 +112,7 @@ namespace ReBuzz.Audio
         private void AsioOut_DriverResetRequest(object sender, EventArgs e)
         {
             // Seems to work better if we reset the audio device after call.
-            Application.Current.Dispatcher.BeginInvoke(() =>
+            dispatcher.BeginInvoke(() =>
             {
                 CreateAudioOut(SelectedOutDevice.Name);
                 Play();
@@ -127,11 +137,11 @@ namespace ReBuzz.Audio
 
         public void CreateWasapiOut(string deviceName)
         {
-            string wasapiDeviceID = RegistryEx.Read("DeviceID", "", "WASAPI");
-            int wasapiDeviceSamplerate = RegistryEx.Read("SampleRate", 44100, "WASAPI");
-            int wasapiMode = RegistryEx.Read("Mode", 0, "WASAPI");
-            int wasapiPoll = RegistryEx.Read("Poll", 0, "WASAPI");
-            int bufferSize = RegistryEx.Read("BufferSize", 1024, "WASAPI");
+            string wasapiDeviceID = registryEx.Read("DeviceID", "", "WASAPI");
+            int wasapiDeviceSamplerate = registryEx.Read("SampleRate", 44100, "WASAPI");
+            int wasapiMode = registryEx.Read("Mode", 0, "WASAPI");
+            int wasapiPoll = registryEx.Read("Poll", 0, "WASAPI");
+            int bufferSize = registryEx.Read("BufferSize", 1024, "WASAPI");
 
             var enumerator = new MMDeviceEnumerator();
             MMDevice mMDevice = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).FirstOrDefault(d => d.ID == wasapiDeviceID);
@@ -147,22 +157,18 @@ namespace ReBuzz.Audio
                 wasapiOut = new WasapiOut();
             }
 
-            AudioProvider = new AudioProvider(buzzCore, wasapiDeviceSamplerate, wasapiOut.OutputWaveFormat.Channels, bufferSize, true);
+            AudioProvider = new AudioProvider(buzzCore, engineSettings, wasapiDeviceSamplerate,
+              wasapiOut.OutputWaveFormat.Channels, bufferSize, true, registryEx);
 
-            try
+            bool success = InitWasapiOut(wasapiOut);
+            if (!success)
             {
-                wasapiOut.Init(AudioProvider);
+                wasapiOut = new WasapiOut(); // System defaults
+                AudioProvider = new AudioProvider(buzzCore, engineSettings, wasapiDeviceSamplerate, 2, bufferSize, true, registryEx);
+                success = InitWasapiOut(wasapiOut);
             }
-            catch (Exception ex)
-            {
-                wasapiOut.Dispose();
-                AudioProvider.Stop();
-                Global.Buzz.DCWriteLine("Wasap error: " + ex);
-                wasapiOut = new WasapiOut();
-
-                AudioProvider = new AudioProvider(buzzCore, wasapiDeviceSamplerate, 2, bufferSize, true);
-                wasapiOut.Init(AudioProvider);
-            }
+            if (!success)
+                return;
 
             wasapiOut.PlaybackStopped += (s, e) =>
             {
@@ -183,7 +189,7 @@ namespace ReBuzz.Audio
 
             try
             {
-                string wasapiDeviceIDIn = RegistryEx.Read("DeviceIDIn", "", "WASAPI");
+                string wasapiDeviceIDIn = registryEx.Read("DeviceIDIn", "", "WASAPI");
                 enumerator = new MMDeviceEnumerator();
                 mMDevice = enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active).FirstOrDefault(d => d.ID == wasapiDeviceIDIn);
                 if (mMDevice != null)
@@ -203,6 +209,26 @@ namespace ReBuzz.Audio
             SelectedOutDevice = new AudioOutDevice() { Name = deviceName, Type = AudioOutType.Wasapi, WavePlayer = wasapiOut };
         }
 
+        bool InitWasapiOut(WasapiOut wasapiOut)
+        {
+            bool success = false;
+            if (wasapiOut != null)
+            {
+                try
+                {
+                    wasapiOut.Init(AudioProvider);
+                    success = true;
+                }
+                catch (Exception ex)
+                {
+                    wasapiOut.Dispose();
+                    AudioProvider.Stop();
+                    buzzCore.DCWriteLine("Wasap error: " + ex);
+                }
+            }
+            return success;
+        }
+
         public void CreateDirectSoundOut(string deviceName)
         {
             int latency = 200;
@@ -211,7 +237,7 @@ namespace ReBuzz.Audio
             //var latency = (int)dxOut.GetType().GetField("desiredLatency", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(dxOut);
 
             int buffer = 2 * latency * samplerate / 1000;
-            AudioProvider = new AudioProvider(buzzCore, samplerate, 2, buffer, true);
+            AudioProvider = new AudioProvider(buzzCore, engineSettings, samplerate, 2, buffer, true, registryEx);
 
             dxOut.Init(AudioProvider);
             SelectedOutDevice = new AudioOutDevice() { Name = deviceName, Type = AudioOutType.DirectSound, WavePlayer = dxOut };
@@ -225,7 +251,7 @@ namespace ReBuzz.Audio
             }
             catch (Exception e)
             {
-                Global.Buzz.DCWriteLine("WavePlayer error: " + e.Message);
+                buzzCore.DCWriteLine("WavePlayer error: " + e.Message);
             }
         }
 
@@ -245,7 +271,10 @@ namespace ReBuzz.Audio
 
                 try
                 {
-                    SelectedOutDevice?.WavePlayer?.Stop();
+                    if (SelectedOutDevice?.WavePlayer?.PlaybackState != PlaybackState.Stopped)
+                    {
+                        SelectedOutDevice?.WavePlayer?.Stop();
+                    }
                 }
                 catch (Exception e)
                 {
@@ -260,7 +289,10 @@ namespace ReBuzz.Audio
         {
             try
             {
-                SelectedOutDevice?.WavePlayer?.Stop();
+                if (SelectedOutDevice?.WavePlayer?.PlaybackState != PlaybackState.Stopped)
+                {
+                    SelectedOutDevice?.WavePlayer?.Stop();
+                }
                 ClearAudioBuffer();
             }
             catch (Exception e)
@@ -290,6 +322,8 @@ namespace ReBuzz.Audio
 
                 SelectedOutDevice.WavePlayer.Dispose();
             }
+
+            SelectedOutDevice = null;
         }
 
         public List<AudioOutDevice> AudioDevices()
@@ -316,10 +350,7 @@ namespace ReBuzz.Audio
 
         internal void CreateAudioOut(string audioDriver)
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                FinalStop();
-            });
+            dispatcher.Invoke(FinalStop);
             ReleaseAudioDriver();
 
             var device = AudioDevices().FirstOrDefault(x => x.Name == audioDriver);
@@ -346,12 +377,17 @@ namespace ReBuzz.Audio
             }
             catch (Exception e)
             {
-                Global.Buzz.DCWriteLine("Audio Driver Error: " + e.Message);
+                buzzCore.DCWriteLine("Audio Driver Error: " + e.Message);
             }
         }
 
         WasapiConfigWindow wasapiConfigWindow;
         AsioConfigWindow asioConfigWindow;
+        private readonly EngineSettings engineSettings;
+        private readonly string buzzPath;
+        private readonly IUiDispatcher dispatcher;
+        private readonly IRegistryEx registryEx;
+
         internal void ShowControlPanel()
         {
             if (SelectedOutDevice != null)
@@ -362,14 +398,14 @@ namespace ReBuzz.Audio
                         if (asioConfigWindow == null)
                         {
                             var asio = (SelectedOutDevice.WavePlayer as AsioOut);
-                            asioConfigWindow = new AsioConfigWindow(asio.DriverName);
+                            asioConfigWindow = new AsioConfigWindow(asio.DriverName, registryEx);
 
                             asioConfigWindow.OpenAsioControlPanel += () =>
                             {
                                 asio.ShowControlPanel();
                             };
 
-                            var rd = Utils.GetUserControlXAML<ResourceDictionary>("MachineView\\MVResources.xaml");
+                            var rd = Utils.GetUserControlXAML<ResourceDictionary>("MachineView\\MVResources.xaml", buzzPath);
                             asioConfigWindow.Resources.MergedDictionaries.Add(rd);
                             if (asioConfigWindow.ShowDialog() == true)
                             {
@@ -384,8 +420,8 @@ namespace ReBuzz.Audio
                     case AudioOutType.Wasapi:
                         if (wasapiConfigWindow == null)
                         {
-                            wasapiConfigWindow = new WasapiConfigWindow();
-                            var rd = Utils.GetUserControlXAML<ResourceDictionary>("MachineView\\MVResources.xaml");
+                            wasapiConfigWindow = new WasapiConfigWindow(registryEx);
+                            var rd = Utils.GetUserControlXAML<ResourceDictionary>("MachineView\\MVResources.xaml", buzzPath);
                             wasapiConfigWindow.Resources.MergedDictionaries.Add(rd);
                             if (wasapiConfigWindow.ShowDialog() == true)
                             {

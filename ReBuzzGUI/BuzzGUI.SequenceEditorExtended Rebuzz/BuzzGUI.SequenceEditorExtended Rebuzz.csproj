@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <RootNamespace>BuzzGUI.SequenceEditor</RootNamespace>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BaseOutputPath>$(SolutionDir)build\$(Configuration)\$(Platform)\BuzzGUI.SequenceEditorExtended Rebuzz\bin</BaseOutputPath>
+    <IntermediateOutputPath>$(SolutionDir)build\$(Configuration)\$(Platform)\BuzzGUI.SequenceEditorExtended Rebuzz\obj</IntermediateOutputPath>
+    <Platforms>AnyCPU;x64</Platforms>
+    <AssemblyName>BuzzGUI.SequenceEditor</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Actions\AddTrackAction.cs" />
+    <Compile Remove="Actions\ClearAction.cs" />
+    <Compile Remove="Actions\CreatePatternAction.cs" />
+    <Compile Remove="Actions\CutOrCopyAction.cs" />
+    <Compile Remove="Actions\DeleteTrackAction.cs" />
+    <Compile Remove="Actions\InsertOrDeleteAction.cs" />
+    <Compile Remove="Actions\PasteAction.cs" />
+    <Compile Remove="Actions\SetEventAction.cs" />
+    <Compile Remove="Actions\SetMarkerAction.cs" />
+    <Compile Remove="Actions\SwapTracksAction.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BuzzGUI.Common\BuzzGUI.Common.csproj">
+      <Aliases>
+      </Aliases>
+    </ProjectReference>
+    <ProjectReference Include="..\BuzzGUI.Interfaces\BuzzGUI.Interfaces.csproj" />
+  </ItemGroup>
+  
+  <Target Name="ForcePerformRestore" AfterTargets="BeforeBuild">	
+    <Exec Command="IF NOT EXIST  &quot;$(IntermediateOutputPath)..\project.assets.json&quot;  echo restore to $(IntermediateOutputPath)..\project.assets.json &amp;&amp;  dotnet restore &quot;$(ProjectName).csproj&quot; --no-dependencies &amp;&amp; move &quot;build\$(ProjectName)\obj\*&quot; &quot;$(IntermediateOutputPath)..\&quot; &amp;&amp; rmdir /Q /S build	 " /> 
+  </Target>
+  
+  <Target Name="RemoveEmptyObj" AfterTargets="AfterBuild">
+    <Exec Command="IF EXIST obj rmdir obj" />
+  </Target>
+</Project>

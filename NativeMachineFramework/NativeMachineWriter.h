@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "Buzz/MachineInterface.h"
+#include <MachineInterface.h>
 
 
 namespace ReBuzz

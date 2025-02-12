@@ -126,6 +126,7 @@ namespace ReBuzz.Core
             }
         }
 
+        // Return values between min & max. No NoValue
         public int GetValue(int track)
         {
             if (!values.ContainsKey(track))
@@ -134,10 +135,11 @@ namespace ReBuzz.Core
             return values[track];
         }
 
+        // Return current value. Used to send calue to native machines
         public int GetPValue(int track)
         {
             if (!pvalues.ContainsKey(track))
-                return DefValue;
+                return NoValue;
 
             return pvalues[track];
         }
@@ -152,6 +154,7 @@ namespace ReBuzz.Core
             return true;
         }
 
+
         ConcurrentDictionary<int, int> values = new ConcurrentDictionary<int, int>();
         readonly ConcurrentDictionary<int, int> pvalues = new ConcurrentDictionary<int, int>();
         readonly Dictionary<int, string> displayNames = new Dictionary<int, string>();
@@ -161,19 +164,20 @@ namespace ReBuzz.Core
         private readonly ConcurrentDictionary<int, EventManager> valueDescrtiptionChangedEvent = new ConcurrentDictionary<int, EventManager>();
 
         //internal Dictionary<int, int> Values { get => values; set => values = value; }
-        public ParameterCore()
+        public ParameterCore(IUiDispatcher dispatcher)
         {
             dtDescribeEvent = new DispatcherTimer();
             dtDescribeEvent.Interval = TimeSpan.FromMilliseconds(1000 / 30.0);
+            this.dispatcher = dispatcher;
         }
-        internal class EventManager
+        internal class EventManager(IUiDispatcher dispatcher)
         {
             public event Action<IParameter, int> Event;
-            public void CallEvent(IParameter parameter, int track)
+            public void CallEvent(IBuzz buzz, IParameter parameter, int track)
             {
                 if (Event != null)
                 {
-                    Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                    dispatcher.BeginInvoke(() =>
                     {
                         try
                         {
@@ -182,9 +186,9 @@ namespace ReBuzz.Core
                         }
                         catch (Exception e)
                         {
-                            Global.Buzz.DCWriteLine(e.Message);
+                            buzz.DCWriteLine(e.Message);
                         }
-                    }), DispatcherPriority.Normal);
+                    }, DispatcherPriority.Normal);
                 }
             }
 
@@ -192,7 +196,7 @@ namespace ReBuzz.Core
             {
                 if (Event != null)
                 {
-                    //Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                    //dispatcher.BeginInvoke(new Action(() =>
                     //{
                     try
                     {
@@ -220,11 +224,13 @@ namespace ReBuzz.Core
 
         static bool describeValueEventPending = false;
         readonly DispatcherTimer dtDescribeEvent;
-        internal void InvokeEvents(int track)
+        private readonly IUiDispatcher dispatcher;
+
+        internal void InvokeEvents(IBuzz buzz, int track)
         {
             if (valueChangedEvent.TryGetValue(track, out EventManager em))
             {
-                em.CallEvent(this, track);
+                em.CallEvent(buzz, this, track);
             }
 
             // Aviod invoking valueDescrtiptionChangedEvent to minimize calls to native machines
@@ -277,45 +283,48 @@ namespace ReBuzz.Core
                     track &= ~do_not_record_flag;
                 }
 
+                // Do we need this?
+                if (pvalues.ContainsKey(track) && pvalues[track] == value)
+                    return;
+
                 // Check ranges
                 if (value != NoValue)
+                {
                     if (Type == ParameterType.Note && value != BuzzNote.Off)
                         value = Math.Max(MinValue, Math.Min(MaxValue, value));
 
-                // Save changes to be sent to managed machines and as events to listeners.
-                machine.parametersChanged[this] = track;
+                    values[track] = value;
 
-                // Do we need this?
-                if (values.ContainsKey(track) && values[track] == value)
-                    return;
-
-                values[track] = value;
-                if (value != NoValue)
-                    pvalues[track] = value;
-
-                // Update inputs. Should this be moved to tick?
-                if (Group.Type == ParameterGroupType.Input && machine.ParameterGroups.Count != 0)
-                {
-                    if (IndexInGroup < machine.ParameterGroups[0].Parameters.Count
-                        && track < machine.Inputs.Count)
+                    // Update inputs. Should this be moved to tick?
+                    if (Group.Type == ParameterGroupType.Input && machine.ParameterGroups.Count != 0)
                     {
-                        var input = machine.Inputs[track];
-                        if (IndexInGroup == 0)
+                        if (IndexInGroup < machine.ParameterGroups[0].Parameters.Count
+                            && track < machine.Inputs.Count)
                         {
-                            input.Amp = value;
-                        }
-                        else
-                        {
-                            input.Pan = value;
+                            var input = machine.Inputs[track];
+                            if (IndexInGroup == 0)
+                            {
+                                input.Amp = value;
+                            }
+                            else
+                            {
+                                input.Pan = value;
+                            }
                         }
                     }
+                    else if (record && Group != null && Group.Machine.Graph != null)
+                    {
+                        var bc = Group.Machine.Graph.Buzz as ReBuzzCore;
+                        //bc.RecordParametersDictionary.TryAdd(new Tuple<ParameterCore,int>(this, track), value);
+                        bc.RecordControlChange(this, track, value);
+                    }
+
+                    // Save changes to be sent to managed machines and as events to listeners.
+                    machine.parametersChanged[this] = track;
                 }
-                else if (record && Group != null && Group.Machine.Graph != null)
-                {
-                    var bc = Group.Machine.Graph.Buzz as ReBuzzCore;
-                    //bc.RecordParametersDictionary.TryAdd(new Tuple<ParameterCore,int>(this, track), value);
-                    bc.RecordControlChange(this, track, value);
-                }
+
+                // This is sent to native machines
+                pvalues[track] = value;
             }
         }
 
@@ -324,7 +333,7 @@ namespace ReBuzz.Core
             if (valueChanged != null)
             {
                 if (!valueChangedEvent.ContainsKey(track))
-                    valueChangedEvent.TryAdd(track, new EventManager());
+                    valueChangedEvent.TryAdd(track, new EventManager(dispatcher));
 
                 var em = valueChangedEvent[track];
                 em.Event += valueChanged;
@@ -332,7 +341,7 @@ namespace ReBuzz.Core
             if (valueDescriptionChanged != null)
             {
                 if (!valueDescrtiptionChangedEvent.ContainsKey(track))
-                    valueDescrtiptionChangedEvent.TryAdd(track, new EventManager());
+                    valueDescrtiptionChangedEvent.TryAdd(track, new EventManager(dispatcher));
 
                 var em = valueDescrtiptionChangedEvent[track];
                 em.Event += valueChanged;
@@ -376,18 +385,20 @@ namespace ReBuzz.Core
 
         internal ParameterCore Clone()
         {
-            ParameterCore p = new ParameterCore();
-            p.Type = Type;
-            p.Name = Name;
-            p.MinValue = MinValue;
-            p.MaxValue = MaxValue;
-            p.DefValue = DefValue;
-            p.NoValue = NoValue;
-            p.Flags = Flags;
-            p.Description = Description;
-            p.Group = Group;
-            p.IndexInGroup = IndexInGroup;
-            p.values = values;
+            ParameterCore p = new ParameterCore(dispatcher)
+            {
+                Type = Type,
+                Name = Name,
+                MinValue = MinValue,
+                MaxValue = MaxValue,
+                DefValue = DefValue,
+                NoValue = NoValue,
+                Flags = Flags,
+                Description = Description,
+                Group = Group,
+                IndexInGroup = IndexInGroup,
+                values = values
+            };
 
             return p;
         }
@@ -407,9 +418,9 @@ namespace ReBuzz.Core
             valueDescrtiptionChangedEvent.Clear();
         }
 
-        internal static ParameterCore GetMidiParameter(MachineCore machine)
+        internal static ParameterCore GetMidiParameter(MachineCore machine, IUiDispatcher dispatcher)
         {
-            ParameterCore parameter = new ParameterCore();
+            ParameterCore parameter = new ParameterCore(dispatcher);
             parameter.Name = "MIDI Note";
             parameter.Description = "MIDI Note";
             parameter.MinValue = BuzzNote.Min;

@@ -19,21 +19,22 @@ namespace ReBuzz
 {
     namespace NativeMachineFramework
     {
-        typedef void (*OnMenuItemClickCallback)(int id, void* param);
-        
         public ref class ContextMenu : System::IDisposable
         {
         public:
+            delegate void OnMenuItemClickDelegate(int id);
+
             ContextMenu();
+            !ContextMenu();
             ~ContextMenu();
 
-            void AddMenuItem(int id, const char * text, OnMenuItemClickCallback clickCallback, void * callbackParam);
+            void AddMenuItem(int id, const char * text, OnMenuItemClickDelegate^ clickCallback);
 
             void ShowAtCursor();
 
         private:
+            void Free();
             void CleanUpItems();
-
             void OnMenuClose(Object^ sender, ToolStripDropDownClosedEventArgs^ args);
             void OnMenuClicked(Object^ sender, ToolStripItemClickedEventArgs^ args);
 
@@ -43,12 +44,11 @@ namespace ReBuzz
             ref class MenuItem
             {
             public:
-                MenuItem(int id, const char* txt, OnMenuItemClickCallback cb, void * p) : m_text(gcnew String(txt)),
-                                                                                          m_id(id),
-                                                                                          m_param(p),
-                                                                                          m_callback(cb),
-                                                                                          m_item(nullptr),
-                                                                                          m_menu(nullptr)
+                MenuItem(int id, const char* txt, OnMenuItemClickDelegate^ cb) : m_text(gcnew String(txt)),
+                                                                                m_id(id),
+                                                                                m_callback(cb),
+                                                                                m_item(nullptr),
+                                                                                m_menu(nullptr)
                 {}
 
                 ~MenuItem();
@@ -64,8 +64,7 @@ namespace ReBuzz
             private:
                 String^ m_text;
                 int m_id;
-                void* m_param;
-                OnMenuItemClickCallback m_callback;
+                OnMenuItemClickDelegate^  m_callback;
                 ToolStripMenuItem^ m_item;
                 ContextMenuStrip^ m_menu;
             };

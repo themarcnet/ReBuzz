@@ -20,10 +20,34 @@ namespace ReBuzz
             m_selfId = Utils::ObjectToInt64(self);
         }
 
+        MachineEventWrapper::!MachineEventWrapper()
+        {
+            if (m_callbacks != NULL)
+            {
+                delete m_callbacks;
+                m_callbacks = NULL;
+            }
+
+            if (m_callbackParams != NULL)
+            {
+                delete m_callbackParams;
+                m_callbackParams = NULL;
+            }
+        }
+
         MachineEventWrapper::~MachineEventWrapper()
         {
-            delete m_callbacks;
-            delete m_callbackParams;
+            if (m_callbacks != NULL)
+            {
+                delete m_callbacks;
+                m_callbacks = NULL;
+            }
+
+            if (m_callbackParams != NULL)
+            {
+                delete m_callbackParams;
+                m_callbackParams = NULL;
+            }
         }
 
         void MachineEventWrapper::OnEvent(IMachine^ machine)

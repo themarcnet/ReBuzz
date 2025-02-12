@@ -19,18 +19,73 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="PatternXPRE\Buzz\XMemDC.cpp" />
-    <ClCompile Include="PatternXPRE\patternxp\ActionStack.cpp" />
-    <ClCompile Include="PatternXPRE\patternxp\App.cpp" />
-    <ClCompile Include="PatternXPRE\patternxp\ColumnDialog.cpp" />
-    <ClCompile Include="PatternXPRE\patternxp\EditorWnd.cpp" />
-    <ClCompile Include="PatternXPRE\patternxp\EmptyWnd.cpp" />
-    <ClCompile Include="PatternXPRE\patternxp\FuBar.cpp" />
+    <ClCompile Include="PatternXPRE\Buzz\XMemDC.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
+    <ClCompile Include="PatternXPRE\patternxp\ActionStack.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
+    <ClCompile Include="PatternXPRE\patternxp\App.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
+    <ClCompile Include="PatternXPRE\patternxp\ColumnDialog.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
+    <ClCompile Include="PatternXPRE\patternxp\EditorWnd.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
+    <ClCompile Include="PatternXPRE\patternxp\EmptyWnd.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
+    <ClCompile Include="PatternXPRE\patternxp\FuBar.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
     <ClCompile Include="PatternXPRE\patternxp\PatEd.cpp" />
-    <ClCompile Include="PatternXPRE\patternxp\RowNumWnd.cpp" />
-    <ClCompile Include="PatternXPRE\patternxp\ScrollWnd.cpp" />
-    <ClCompile Include="PatternXPRE\patternxp\ToolBar2.cpp" />
-    <ClCompile Include="PatternXPRE\patternxp\TopWnd.cpp" />
+    <ClCompile Include="PatternXPRE\patternxp\RowNumWnd.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
+    <ClCompile Include="PatternXPRE\patternxp\ScrollWnd.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
+    <ClCompile Include="PatternXPRE\patternxp\ToolBar2.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
+    <ClCompile Include="PatternXPRE\patternxp\TopWnd.cpp">
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</CompileAsManaged>
+      <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
+    </ClCompile>
     <ClCompile Include="PatternXPRE\patternxp\tree\CreateCheckboxImageList.cpp" />
     <ClCompile Include="PatternXPRE\patternxp\tree\VisualStylesXP.cpp" />
     <ClCompile Include="PatternXPRE\patternxp\tree\XHtmlTree.cpp" />
@@ -57,15 +112,6 @@
     <ClInclude Include="ReBuzzPatternXP.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NativeMachineFramework\NativeMachineFramework.vcxproj">
-      <Project>{b1d5248c-b2b6-49fe-b1e7-f77b93fa3531}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.Common\BuzzGUI.Common.csproj">
-      <Project>{dab6d874-8227-415e-8f3c-47adee50a038}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.Interfaces\BuzzGUI.Interfaces.csproj">
-      <Project>{3c40f365-4754-4525-8b1f-3807983ceea7}</Project>
-    </ProjectReference>
     <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
   </ItemGroup>
   <ItemGroup>
@@ -75,6 +121,21 @@
     <Image Include="PatternXPRE\patternxp\toolbar1.bmp" />
     <Image Include="PatternXPRE\patternxp\toolbar24.bmp" />
     <Image Include="PatternXPRE\patternxp\treeimages.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NativeMachineFramework\NativeMachineFramework.vcxproj">
+      <Project>{b1d5248c-b2b6-49fe-b1e7-f77b93fa3531}</Project>
+      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.Common\BuzzGUI.Common.csproj">
+      <Project>{d6e23307-d10e-4932-be55-0e6641125a9d}</Project>
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\ReBuzzGUI\BuzzGUI.Interfaces\BuzzGUI.Interfaces.csproj">
+      <Project>{883a6cd2-b96a-4a52-9671-b6915786c260}</Project>
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -138,26 +199,26 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(TargetFramework)-windows\Gear\Generators\</OutDir>
-    <IntDir>$(SolutionDir)build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\$(Platform)\$(TargetFramework)-windows\Gear\Generators\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
     <ManagedAssembly>true</ManagedAssembly>
     <TargetName>$(ProjectName).NET</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(TargetFramework)-windows\Gear\Generators\</OutDir>
-    <IntDir>$(SolutionDir)build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\$(Platform)\$(TargetFramework)-windows\Gear\Generators\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
     <ManagedAssembly>true</ManagedAssembly>
     <TargetName>$(ProjectName).NET</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(TargetFramework)-windows\Gear\Generators\</OutDir>
-    <IntDir>$(SolutionDir)build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\$(Platform)\$(TargetFramework)-windows\Gear\Generators\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
     <ManagedAssembly>true</ManagedAssembly>
     <TargetName>$(ProjectName).NET</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(TargetFramework)-windows\Gear\Generators\</OutDir>
-    <IntDir>$(SolutionDir)build\$(Configuration)\$(ProjectName)\$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\$(Platform)\$(TargetFramework)-windows\Gear\Generators\</OutDir>
+    <IntDir>$(SolutionDir)build\$(Configuration)\$(Platform)\$(ProjectName)\</IntDir>
     <ManagedAssembly>true</ManagedAssembly>
     <TargetName>$(ProjectName).NET</TargetName>
   </PropertyGroup>
@@ -165,7 +226,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>_DEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)PatternXPRE\patternxp\tree;$(ProjectDir)PatternXPRE\patternxp;$(ProjectDir)..\NativeMachineFramework;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)PatternXPRE\patternxp\tree;$(ProjectDir)PatternXPRE\patternxp;$(ProjectDir)..\NativeMachineFramework;$(ProjectDir)PatternXPRE\Buzz;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4642</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -178,7 +239,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)PatternXPRE\patternxp\tree;$(ProjectDir)PatternXPRE\patternxp;$(ProjectDir)..\NativeMachineFramework;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)PatternXPRE\patternxp\tree;$(ProjectDir)PatternXPRE\patternxp;$(ProjectDir)..\NativeMachineFramework;$(ProjectDir)PatternXPRE\Buzz;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4642</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -190,7 +251,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)PatternXPRE\patternxp\tree;$(ProjectDir)PatternXPRE\patternxp;$(ProjectDir)..\NativeMachineFramework;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)PatternXPRE\patternxp\tree;$(ProjectDir)PatternXPRE\patternxp;$(ProjectDir)..\NativeMachineFramework;$(ProjectDir)PatternXPRE\Buzz;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4642</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -202,7 +263,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)PatternXPRE\patternxp\tree;$(ProjectDir)PatternXPRE\patternxp;$(ProjectDir)..\NativeMachineFramework;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)PatternXPRE\patternxp\tree;$(ProjectDir)PatternXPRE\patternxp;$(ProjectDir)..\NativeMachineFramework;$(ProjectDir)PatternXPRE\Buzz;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4642</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>

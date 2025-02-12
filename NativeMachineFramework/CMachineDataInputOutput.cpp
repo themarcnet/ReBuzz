@@ -1,4 +1,4 @@
-#include "Buzz/MachineInterface.h"
+#include <MachineInterface.h>
 
 void CMachineDataOutput::Write(void* pbuf, int const numbytes)
 {}

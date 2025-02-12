@@ -12,6 +12,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using BuzzGUI.Common.Settings;
+using BuzzGUI.ParameterWindow;
+using System.Threading;
 
 namespace ReBuzz.MachineManagement
 {
@@ -68,18 +71,22 @@ namespace ReBuzz.MachineManagement
 
         private readonly SongCore song;
 
-        internal MachineManager(SongCore song)
+        internal MachineManager(SongCore song, EngineSettings settings, string buzzPath, IUiDispatcher dispatcher)
         {
             this.song = song;
             IsSingleProcessMode = false;
+            engineSettings = settings;
+            this.buzzPath = buzzPath;
+            this.dispatcher = dispatcher;
         }
 
         // instrumentPath == null or "" if instruments are not supported
         public MachineCore CreateMachine(string libName, string path, string instrument, byte[] data, int trackCount, float x, float y, bool hidden, string machineName = null, bool callInit = true)
         {
+            // Removed this lock. Uncomment if ReBuzz goes weird
             //lock (ReBuzzCore.AudioLock)
             {
-                MachineCore machine = new MachineCore(song);
+                MachineCore machine = new MachineCore(song, buzzPath, dispatcher);
                 machine.InstrumentName = instrument;
                 machine.Position = new Tuple<float, float>(x, y);
                 machine.Hidden = hidden;
@@ -91,11 +98,13 @@ namespace ReBuzz.MachineManagement
                     machineDLL.IsMissing = true;
                     machineDLL.Name = libName;
                     machineDLL.Path = path;
+                    machineDLL.MachineInfo.MinTracks = machineDLL.MachineInfo.MaxTracks = trackCount;
                     machine.MachineDLL = machineDLL;
                     machine.MachineDLL.Buzz = buzz;
                     machine.Name = GetNewMachineName(machineName);
                     machine.TrackCount = trackCount;
-
+                    machine.Data = data;
+                    
                     buzz.AddMachine(machine);
                     machine.Ready = true;
                     return machine;
@@ -117,14 +126,17 @@ namespace ReBuzz.MachineManagement
                 {
                     CreateNativeMachine(machine, instrument, trackCount, data, callInit);
                 }
-                machine.invalidateWaves = true;
+
+                buzz.AddMachine(machine);
+
+                machine.updateWaveInfo = true;
                 return machine;
             }
         }
 
         public void CreateManagedMachine(MachineCore machine, int trackcount, byte[] data)
         {
-            ManagedMachineDLL managedMachineDLL = new ManagedMachineDLL();
+            ManagedMachineDLL managedMachineDLL = new ManagedMachineDLL(dispatcher);
             managedMachineDLL.LoadManagedMachine(machine.MachineDLL.Path);
             ManagedMachineHost managedMachineHost = new ManagedMachineHost(managedMachineDLL);
 
@@ -170,15 +182,18 @@ namespace ReBuzz.MachineManagement
                 machine.Data = data;
             }
 
-            buzz.AddMachine(machine);
 
             // Set default values
             managedMachineHost.SetParameterDefaults(machine);
+
             machine.Ready = true;
         }
 
         NativeMachineHost nativeMachineHostSingleProcess32;
         NativeMachineHost nativeMachineHostSingleProcess64;
+        private readonly EngineSettings engineSettings;
+        private readonly string buzzPath;
+        private readonly IUiDispatcher dispatcher;
 
         void CreateNativeMachine(MachineCore machine, string instrument, int trackCount, byte[] data, bool callInit = true)
         {
@@ -189,7 +204,7 @@ namespace ReBuzz.MachineManagement
                 {
                     if (nativeMachineHostSingleProcess64 == null)
                     {
-                        nativeMachineHostSingleProcess64 = new NativeMachineHost("ReBuzzConnectID");
+                        nativeMachineHostSingleProcess64 = new NativeMachineHost("ReBuzzConnectID", buzzPath, dispatcher);
                         nativeMachineHostSingleProcess64.InitHost(Buzz, machine.MachineDLL.Is64Bit);
                     }
                     nativeMachineHost = nativeMachineHostSingleProcess64;
@@ -198,7 +213,7 @@ namespace ReBuzz.MachineManagement
                 {
                     if (nativeMachineHostSingleProcess32 == null)
                     {
-                        nativeMachineHostSingleProcess32 = new NativeMachineHost("ReBuzzConnectID");
+                        nativeMachineHostSingleProcess32 = new NativeMachineHost("ReBuzzConnectID", buzzPath, dispatcher);
                         nativeMachineHostSingleProcess32.InitHost(Buzz, machine.MachineDLL.Is64Bit);
                     }
                     nativeMachineHost = nativeMachineHostSingleProcess32;
@@ -206,13 +221,17 @@ namespace ReBuzz.MachineManagement
             }
             else
             {
-                nativeMachineHost = new NativeMachineHost("ReBuzzConnectID");
+                nativeMachineHost = new NativeMachineHost("ReBuzzConnectID", buzzPath, dispatcher);
                 nativeMachineHost.InitHost(Buzz, machine.MachineDLL.Is64Bit);
             }
 
             machine.InstrumentName = instrument;
             var uiMessage = nativeMachineHost.UIMessage;
             var audioMessage = nativeMachineHost.AudioMessage;
+
+            // Send wavetable info before new?
+            //audioMessage.AudioBeginBlock(machine, buzz.Song.Wavetable as WavetableCore);
+
             uiMessage.SendMessageBuzzInitSync(Buzz.MainWindowHandle, machine.MachineDLL.Is64Bit);
             uiMessage.UIDSPInitSync(ReBuzzCore.masterInfo.SamplesPerSec);
 
@@ -235,8 +254,6 @@ namespace ReBuzz.MachineManagement
 
             uiMessage.UINewMISync(machine, machine.DLL.Name);
 
-            buzz.AddMachine(machine);
-
             // Machine Skin
             uiMessage.UIGetResources(machine, out BitmapSource skin, out BitmapSource led, out Point ledPosition);
 
@@ -250,8 +267,10 @@ namespace ReBuzz.MachineManagement
             machine.IsControlMachine = machine.MachineDLL.Info.Flags.HasFlag(MachineInfoFlags.CONTROL_MACHINE);
             machine.MachineDLL.SkinLEDPosition = ledPosition;
 
+            // Add machine here so that it is visible when machine does callbacks
             nativeMachines.Add(machine, nativeMachineHost);
-
+            buzz.SongCore.MachinesList.Add(machine);
+            
             if (callInit)
             {
                 CallInit(machine, data, trackCount);
@@ -260,6 +279,9 @@ namespace ReBuzz.MachineManagement
 
         internal void CallInit(MachineCore machine, byte[] data, int trackCount)
         {
+            if (machine.DLL.IsMissing)
+                return;
+
             var nativeMachineHost = nativeMachines[machine];
             var uiMessage = nativeMachineHost.UIMessage;
             var audioMessage = nativeMachineHost.AudioMessage;
@@ -378,9 +400,9 @@ namespace ReBuzz.MachineManagement
             return name;
         }
 
-        public MachineCore GetMaster(ReBuzzCore buzz)
+        public MachineCore GetMaster(IBuzz buzz)
         {
-            MachineCore machine = new MachineCore(song);
+            MachineCore machine = new MachineCore(song, buzzPath, dispatcher);
             machine.Name = "Master";
             machine.InputChannelCount = 1;
             machine.OutputChannelCount = 0;
@@ -397,7 +419,7 @@ namespace ReBuzz.MachineManagement
             dll.IsOutOfProcess = false;
             dll.Is64Bit = true;
             dll.Buzz = buzz;
-            dll.Path = Global.BuzzPath + "\\Gear";
+            dll.Path = buzzPath + "\\Gear";
             dll.Name = "Master";
 
             //dll.TextColor = Global.Buzz.ThemeColors["MV Machine Text"] != null ? Global.Buzz.ThemeColors["MV Machine Text"] : Colors.GhostWhite;
@@ -419,7 +441,7 @@ namespace ReBuzz.MachineManagement
             pgGlobal.TrackCount = 1;
             pgGlobal.Type = ParameterGroupType.Global;
 
-            var parameter = new ParameterCore();
+            var parameter = new ParameterCore(dispatcher);
             parameter.Name = "Volume";
             parameter.Description = "Master Volume (0=0 dB, 4000=-80 dB)";
             parameter.MinValue = 0;
@@ -432,7 +454,7 @@ namespace ReBuzz.MachineManagement
             parameter.IndexInGroup = 0;
             pgGlobal.AddParameter(parameter);
 
-            parameter = new ParameterCore();
+            parameter = new ParameterCore(dispatcher);
             parameter.Name = "BPM";
             parameter.Description = "Beats Per Minute (10-200 hex)";
             parameter.MinValue = 10;
@@ -445,7 +467,7 @@ namespace ReBuzz.MachineManagement
             parameter.IndexInGroup = 1;
             pgGlobal.AddParameter(parameter);
 
-            parameter = new ParameterCore();
+            parameter = new ParameterCore(dispatcher);
             parameter.Name = "TPB";
             parameter.Description = "Ticks Per Beat (1-20 hex)";
             parameter.MinValue = 1;
@@ -464,6 +486,8 @@ namespace ReBuzz.MachineManagement
             pgTracks.TrackCount = 0;
 
             machine.ParameterGroupsList.Add(pgTracks);
+
+            machine.Ready = true;
             return machine;
         }
 
@@ -535,7 +559,7 @@ namespace ReBuzz.MachineManagement
         {
             if (nativeMachines.ContainsKey(machine))
             {
-                nativeMachines[machine].AudioMessage.AudioBeginBlock(machine, null);
+                nativeMachines[machine].AudioMessage.AudioBeginBlock(machine, buzz.Song.Wavetable as WavetableCore);
             }
         }
 
@@ -548,6 +572,21 @@ namespace ReBuzz.MachineManagement
             {
                 machine.Ready = false;
                 machine.ClearEvents();
+
+                var gui = machine.gui;
+                if (gui != null)
+                {
+                    gui.Machine = null;
+                    gui = null;
+                }
+
+                var pw = machine.ParameterWindow;
+                if (pw != null)
+                {
+                    var dc = machine.ParameterWindow.DataContext as ParameterWindowVM;
+                    if (dc != null)
+                        dc.Machine = null;
+                }
 
                 if (nativeMachines.ContainsKey(machine))
                 {
@@ -576,6 +615,7 @@ namespace ReBuzz.MachineManagement
                 else if (managedMachines.ContainsKey(machine))
                 {
                     var machineHost = managedMachines[machine];
+                        
                     machineHost.Release();
                     managedMachines.Remove(machine);
                 }
@@ -633,7 +673,7 @@ namespace ReBuzz.MachineManagement
                         else
                             mmh.MidiControlChange(commandCode, channel, val);
                     }
-                    else if (commandCode == 208) // Aftertouch
+                    else if (commandCode == MIDI.ChannelAftertouch) // Aftertouch
                     {
                         if (polacConversion)
                             mmh.MidiControlChange(0xfc, channel, data1);
@@ -837,9 +877,9 @@ namespace ReBuzz.MachineManagement
                 nativeMachines[machine].UIMessage.UIStop(machine);
             }
 
-            foreach (var pg in machine.ParameterGroupsList)
-                foreach (var p in pg.ParametersList)
-                    p.ClearPVal();
+            //foreach (var pg in machine.ParameterGroupsList)
+            //    foreach (var p in pg.ParametersList)
+            //        p.ClearPVal();
         }
 
         internal void UpdateMasterAndSubTickInfoToHost()
@@ -886,7 +926,7 @@ namespace ReBuzz.MachineManagement
         {
             if (!workInstances.ContainsKey(machine))
             {
-                var mwi = new MachineWorkInstance(machine, Buzz);
+                var mwi = new MachineWorkInstance(machine, Buzz, engineSettings);
                 workInstances[machine] = mwi;
                 return mwi;
             }
@@ -1063,7 +1103,7 @@ namespace ReBuzz.MachineManagement
             lock (ReBuzzCore.AudioLock)
             {
                 // Check also if machine has MIF_DOES_INPUT_MIXING?
-                if (nativeMachines.ContainsKey(machine) && machine.DLL.Info.Version >= BUZZ_MACHINE_INTERFACE_VERSION_15 /* && machine.DLL.Info.Flags.HasFlag(MachineInfoFlags.DOES_INPUT_MIXING) */)
+                if (nativeMachines.ContainsKey(machine) && machine.DLL.Info.Version >= BUZZ_MACHINE_INTERFACE_VERSION_15 && machine.DLL.Info.Flags.HasFlag(MachineInfoFlags.DOES_INPUT_MIXING))
                 {
                     var host = nativeMachines[machine];
                     host.UIMessage.UIAddInput(machine, source.Name, stereo);
@@ -1072,7 +1112,7 @@ namespace ReBuzz.MachineManagement
         }
         internal void DeleteInput(MachineCore machine, IMachine source)
         {
-            if (nativeMachines.ContainsKey(machine) && machine.DLL.Info.Version >= BUZZ_MACHINE_INTERFACE_VERSION_15 /* && machine.DLL.Info.Flags.HasFlag(MachineInfoFlags.DOES_INPUT_MIXING) */)
+            if (nativeMachines.ContainsKey(machine) && machine.DLL.Info.Version >= BUZZ_MACHINE_INTERFACE_VERSION_15 && machine.DLL.Info.Flags.HasFlag(MachineInfoFlags.DOES_INPUT_MIXING))
             {
                 var host = nativeMachines[machine];
                 host.UIMessage.UIDeleteInput(machine, source.Name);
@@ -1081,7 +1121,7 @@ namespace ReBuzz.MachineManagement
 
         internal void RenameInput(MachineCore machine, string oldName, string newName)
         {
-            if (nativeMachines.ContainsKey(machine) && machine.DLL.Info.Version >= BUZZ_MACHINE_INTERFACE_VERSION_15 /* && machine.DLL.Info.Flags.HasFlag(MachineInfoFlags.DOES_INPUT_MIXING) */)
+            if (nativeMachines.ContainsKey(machine) && machine.DLL.Info.Version >= BUZZ_MACHINE_INTERFACE_VERSION_15 && machine.DLL.Info.Flags.HasFlag(MachineInfoFlags.DOES_INPUT_MIXING))
             {
                 var host = nativeMachines[machine];
                 host.UIMessage.UIRenameInput(machine, oldName, newName);
@@ -1125,11 +1165,11 @@ namespace ReBuzz.MachineManagement
             }
         }
 
-        internal void InvalidateWaves()
+        internal void UpdateWaveInfo()
         {
             foreach (var machine in nativeMachines)
             {
-                machine.Key.invalidateWaves = true;
+                machine.Key.updateWaveInfo = true;
             }
         }
 
@@ -1144,6 +1184,28 @@ namespace ReBuzz.MachineManagement
             {
                 var machineHost = NativeMachines[machine];
                 machineHost.UIMessage.UpdateWaveReferences(machine, editorTargetMachine, remappedWaveReferences);
+            }
+        }
+
+        internal void SendWaveChangedEvents(MachineCore machine, int index)
+        {   
+            var eventType = machine.CMachineEventType;
+            for (int i = 0; i < eventType.Count; i++)
+            {
+                if (eventType[i].Type == BEventType.gWaveChanged)
+                {
+                    MachineEvent(machine, eventType[i], index);
+                    return;
+                }
+            }
+        }
+
+        internal void SetWaveChangedEvent(int index)
+        {
+            foreach (var machineKV in nativeMachines)
+            {
+                var machine = machineKV.Key;
+                machine.wavesEventsPending.Add(index);
             }
         }
     }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Buzz\MachineInterface.h"
+#include <MachineInterface.h>
 #include "RefClassWrapper.h"
 #include "RebuzzBuzzLookup.h"
 
@@ -10,6 +10,7 @@ using Buzz::MachineInterface::IBuzzMachine;
 using BuzzGUI::Interfaces::IMachine;
 using BuzzGUI::Interfaces::IWaveLayer;
 using System::IntPtr;
+using System::Xml::Linq::XDocument;
 
 
 #ifdef _BUILD_NATIVEFW_DLL
@@ -77,7 +78,20 @@ namespace ReBuzz
             bool GetPlayNotesState() override;
             
             int GetBaseOctave() override;
+            int GetSelectedWave() override;
+            void SelectWave(int i) override;
+            CWaveInfo const* GetWave(int const i) override;
             void SetPatternEditorMachine(CMachine* pmac, bool gotoeditor) override;
+
+            //Profile stuff
+            int GetProfileInt(char const* entry, int defvalue) override;
+            void GetProfileString(char const* entry, char const* value, char const* defvalue) override;
+            void GetProfileBinary(char const* entry, byte** data, int* nbytes) override;
+            void FreeProfileBinary(byte* data) override;
+            void WriteProfileInt(char const* entry, int value) override;
+            void WriteProfileString(char const* entry, char const* value) override;           
+            void WriteProfileBinary(char const* entry, byte* data, int nbytes) override;
+            
 
             //------------------------------------------------------------------------------------
             //API that is delayed - to be called API when exInterface is set
@@ -90,7 +104,6 @@ namespace ReBuzz
         private:
 
             void UpdateMasterInfo();
-            
 
             RefClassWrapper<IBuzzMachine> m_netmcahine;
             RefClassWrapper<IBuzzMachineHost> m_machinehost;
@@ -112,7 +125,9 @@ namespace ReBuzz
 
             std::string m_statusBarText0;
             std::string m_statusBarText1;
-            
+
+            std::mutex m_lock;
+            std::unordered_map<int, std::shared_ptr<CWaveInfo>> m_waveinfo;
         };
 
     }

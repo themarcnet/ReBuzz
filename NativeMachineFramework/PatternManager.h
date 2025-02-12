@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Buzz\MachineInterface.h"
+#include <MachineInterface.h>
 #include "RebuzzBuzzLookup.h"
 #include "BuzzDataTypes.h"
 
@@ -20,7 +20,7 @@ namespace ReBuzz
     namespace NativeMachineFramework
     {
       
-        typedef void(*OnPatternEditorRedrawCallback)(void * param);
+       // typedef void(*OnPatternEditorRedrawCallback)(void * param);
 
         enum PatternEventFlags
         {
@@ -30,17 +30,21 @@ namespace ReBuzz
             PatternEventFlags_All = PatternEventFlags_Name | PatternEventFlags_Length
         };
 
-        typedef void (*OnPatternEventCallback)(int64_t id, IPattern ^ pat, CPattern * buzzPat, PatternEventFlags flags, void* param);
+        //typedef void (*OnPatternEventCallback)(int64_t id, IPattern ^ pat, CPattern * buzzPat, PatternEventFlags flags, void* param);
      
         public ref class PatternManager : System::IDisposable
         {
         public:
-            PatternManager(OnPatternEventCallback onPatternAddedCallback,
-                           OnPatternEventCallback onPatternRemovedCallback,
-                           OnPatternEventCallback onPatternChangedCallback,
-                           OnPatternEditorRedrawCallback onPatternEditorRedrawCallback,
-                           void* callbackData);
+            delegate void OnPatternEventDelegate(int64_t id, IPattern^ pat, CPattern* buzzPat, PatternEventFlags flags);
 
+            delegate void OnPatternEditorRedrawDelegate();
+
+            PatternManager(OnPatternEventDelegate^ onPatternAddedCallback,
+                           OnPatternEventDelegate^ onPatternRemovedCallback,
+                           OnPatternEventDelegate^ onPatternChangedCallback,
+                           OnPatternEditorRedrawDelegate^ onPatternEditorRedrawCallback);
+
+            !PatternManager();
             ~PatternManager();
 
             void Release();
@@ -61,11 +65,16 @@ namespace ReBuzz
             
             void AddEventHandlersToMachine(IMachine^ mach);
 
+            IMachine^ GetEditorTargetMachine();
+
+            void SetEditorTargetMachine(IMachine^ mach);
+
         private:
-            
+            void Free();
             void OnReBuzzPatternColumnChange(IPatternColumn^ patcol);
             void OnReBuzzPatternChange(IPattern^ patcol, bool lock);
             void OnPatternCreatedByRebuzz(IPattern^ pattern);
+            void OnPatternRemovedByRebuzz(IPattern^ pattern);
             
             static void PatternChangeCheckCallback(uint64_t id, IPattern^ rebuzzpat, CPattern* buzzpat, CPatternData* patdata, void* param);
 
@@ -76,18 +85,19 @@ namespace ReBuzz
             void* m_patternCallbackData;
             std::mutex* m_lock;
 
-            OnPatternEventCallback m_onPatternAddedCallback;
-            OnPatternEventCallback m_onPatternRemovedCallback;
-            OnPatternEventCallback m_onPatternChangedCallback;
-            OnPatternEditorRedrawCallback m_onPatternEditorRedrawCallback;
-            void* m_callbackParam;
-
+            OnPatternEventDelegate^ m_onPatternAddedCallback;
+            OnPatternEventDelegate^ m_onPatternRemovedCallback;
+            OnPatternEventDelegate^ m_onPatternChangedCallback;
+            OnPatternEditorRedrawDelegate^ m_onPatternEditorRedrawCallback;
+            
             System::Action<IPatternColumn^>^ m_onPatternChangeAction;
             PropertyChangedEventHandler^ m_onPropChangeEventHandler;
 
             System::Action<IPattern^>^ m_patternAddedAction;
+            System::Action<IPattern^>^ m_patternRemovedAction;
             std::set<int64_t>* m_eventHandlersAddedToMachines;
             std::vector<RefClassWrapper<IMachine>> * m_machinesEventHandlersAddedTo;
+            IMachine^ m_editorTargetMachine;
         };
     }
 }

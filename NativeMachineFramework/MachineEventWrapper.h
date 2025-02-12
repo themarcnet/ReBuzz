@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MachineManager.h"
-#include "Buzz\MachineInterface.h"
+#include <MachineInterface.h>
 #include <vector>
 
 using BuzzGUI::Interfaces::IMachine;
@@ -17,6 +17,7 @@ namespace ReBuzz
         public:
             MachineEventWrapper(MachineManager^ machmgr, IMachine^ self, CMachineInterface* machineIface);
 
+            !MachineEventWrapper();
             ~MachineEventWrapper();
 
             void OnEvent(IMachine^ machine);

@@ -55,7 +55,13 @@ namespace ReBuzz
 
         void  ContextMenu::MenuItem::OnMenuItemClick()
         {
-            m_callback(m_id, m_param);
+            try
+            {
+                m_callback(m_id);
+            }
+            catch (...)
+            {
+            }
         }
 
         //====================================================================
@@ -72,7 +78,17 @@ namespace ReBuzz
             m_menu->ItemClicked += m_clickHandler;
         }
 
+        ContextMenu::!ContextMenu()
+        {
+            Free();
+        }
+
         ContextMenu::~ContextMenu()
+        {
+            Free();
+        }
+
+        void ContextMenu::Free()
         {
             CleanUpItems();
 
@@ -85,17 +101,39 @@ namespace ReBuzz
                 }
             }
 
-            m_menu->ItemClicked -= m_clickHandler;
-            m_menu->Closed -= m_closeHandler;
+            if (m_clickHandler != nullptr)
+            {
+                m_menu->ItemClicked -= m_clickHandler;
+                delete m_clickHandler;
+                m_clickHandler = nullptr;
+            }
 
-            delete m_clickHandler;
-            delete m_closeHandler;
-            delete m_menu;
-            delete m_menuItems;
+            if (m_closeHandler != nullptr)
+            {
+                m_menu->Closed -= m_closeHandler;
+                delete m_closeHandler;
+                m_closeHandler = nullptr;
+            }
+
+            
+            if (m_menu != nullptr)
+            {
+                delete m_menu;
+                m_menu = nullptr;
+            }
+            
+            if (m_menuItems != NULL)
+            {
+                delete m_menuItems;
+                m_menuItems = NULL;
+            }
         }
 
         void ContextMenu::CleanUpItems()
         {
+            if (m_menuItems == NULL)
+                return;
+
             for (const auto& itr : *m_menuItems)
             {
                 itr.GetRef()->CleanUp();
@@ -118,9 +156,9 @@ namespace ReBuzz
             }
         }
 
-        void ContextMenu::AddMenuItem(int id, const char * text, OnMenuItemClickCallback clickCallback, void* callbackParam)
+        void ContextMenu::AddMenuItem(int id, const char * text, OnMenuItemClickDelegate^ clickCallback)
         {
-            m_menuItems->push_back(gcnew MenuItem(id, text, clickCallback, callbackParam));
+            m_menuItems->push_back(gcnew MenuItem(id, text, clickCallback));
         }
 
         void ContextMenu::ShowAtCursor()

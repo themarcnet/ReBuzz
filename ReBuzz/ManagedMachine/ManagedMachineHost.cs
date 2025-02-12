@@ -49,8 +49,9 @@ namespace ReBuzz.ManagedMachine
         #region Pattern Editor
         private delegate System.Windows.Controls.UserControl PatternEditorControlDelegate();
 
-        //For machines that do not support WPF (such as CLR), and will return
-        //a WinForms UserControl instead.
+
+        //For machines that do not support .NET 9.0 WPF (such as CLR), and will return
+        //a .NET Framework 4.x WinForms UserControl instead.
         private delegate System.Windows.Forms.UserControl OldPatternEditorControlDelegate();
 
         private delegate void SetEditorPatternDelegate(IPattern pattern);
@@ -209,7 +210,6 @@ namespace ReBuzz.ManagedMachine
             MidiNoteFunction = (MidiNoteDelegate)GetMethod(typeof(MidiNoteDelegate), "MidiNote");
             MidiControlChangeFunction = (MidiControlChangeDelegate)GetMethod(typeof(MidiControlChangeDelegate), "MidiControlChange");
             GetLatencyFunction = (GetLatencyDelegate)GetMethod(typeof(GetLatencyDelegate), "GetLatency");
-
             //Take into consideration that some more native machines may want to return System.Windows.Forms.UserControl.
             //In this situation, we can use NativeMachineFrameworkUI to wrap around the System.Windows.Forms.UserControl
             try
@@ -720,12 +720,11 @@ namespace ReBuzz.ManagedMachine
 
             //For CLR machines, or machines that are Disposable, 
             //the Dispose() method must be called to properlly free up resources
-            //used by that machine
+            //used by that machine (such as native resources)
             if(machine is IDisposable)
             {
                 (machine as IDisposable).Dispose();
             }
-
             machine = null;
             dll = null;
         }

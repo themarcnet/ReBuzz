@@ -1,7 +1,9 @@
 ﻿using BuzzGUI.Interfaces;
 using ReBuzz.Core;
 using ReBuzz.FileOps;
+using System;
 using System.Collections.Generic;
+using System.Dynamic;
 
 namespace ReBuzz.MachineManagement
 {
@@ -14,7 +16,35 @@ namespace ReBuzz.MachineManagement
 
         }
 
-        public List<Instrument> CreateInstrumentsList(ReBuzzCore buzz, MachineDatabase mdb)
+        internal static Instrument CreateFromMoreMachines(MachineDLL machineDll)
+        {
+            Instrument instrument = new Instrument();
+
+            instrument.Name = "";
+            instrument.Path = "";
+
+            if (machineDll.Info.Type == MachineType.Effect)
+            {
+                instrument.Type = InstrumentType.Effect;
+            }
+            else if (machineDll.Info.Type == MachineType.Generator && machineDll.Info.Flags.HasFlag(MachineInfoFlags.CONTROL_MACHINE))
+            {
+                instrument.Type = InstrumentType.Control;
+            }
+            else if (machineDll.Info.Type == MachineType.Generator)
+            {
+                instrument.Type = InstrumentType.Generator;
+            }
+            else
+            {
+                instrument.Type = InstrumentType.Unknown;
+            }
+
+            instrument.MachineDLL = machineDll;
+            return instrument;
+        }
+
+        public List<Instrument> CreateInstrumentsList(IBuzz buzz, IMachineDatabase mdb)
         {
             list.Clear();
 

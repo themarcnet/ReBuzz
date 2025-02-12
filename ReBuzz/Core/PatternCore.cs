@@ -119,7 +119,7 @@ namespace ReBuzz.Core
             }
         }
 
-        public PatternCore(MachineCore machineCore, string name, int length)
+        public PatternCore(MachineCore machineCore, string name, int length, IUiDispatcher dispatcher)
         {
             Machine = machineCore;
             Name = name;
@@ -135,6 +135,7 @@ namespace ReBuzz.Core
                 columns.Add(pc);
             }
             */
+            this.dispatcher = dispatcher;
         }
 
         public event Action<IPatternColumn> ColumnAdded;
@@ -162,7 +163,7 @@ namespace ReBuzz.Core
             ColumnAdded?.Invoke(pcc);
         }
 
-        public void InsertColumn(int index, IMachine m)
+        public void InsertColumn(int index, IMachine? m)
         {
             if (m != null)
             {
@@ -174,7 +175,7 @@ namespace ReBuzz.Core
             }
             else
             {
-                ParameterCore parameter = ParameterCore.GetMidiParameter(Machine as MachineCore);
+                ParameterCore parameter = ParameterCore.GetMidiParameter(Machine as MachineCore, dispatcher);
 
                 PatternColumnCore pcc = new PatternColumnCore(PatternColumnType.MIDI, this, Machine, parameter, 0, null, null);
                 columns.Insert(index, pcc);
@@ -187,6 +188,8 @@ namespace ReBuzz.Core
         }
 
         double nextPositionInSamples = 0;
+        private readonly IUiDispatcher dispatcher;
+
         internal void UpdateSoloPlayPosition(int sampleCount)
         {
             var masterInfo = ReBuzzCore.masterInfo;
@@ -205,7 +208,7 @@ namespace ReBuzz.Core
 
         public void NotifyPatternChanged()
         {
-            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            dispatcher.BeginInvoke(new Action(() =>
             {
                 PatternChanged?.Invoke(null);
             }));
