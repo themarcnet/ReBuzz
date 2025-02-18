@@ -844,6 +844,8 @@ namespace ReBuzz.Core
 
             // Control machines !MUST! send the changes immediately before Work() so that events get triggered correctly
             //machineManager.Tick(this);
+
+            // Below does not work because the parameter changes might slip to next tick.
             sendControlChangesFlag = true;
         }
 
